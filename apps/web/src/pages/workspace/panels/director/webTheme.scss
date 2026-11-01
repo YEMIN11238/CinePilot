@@ -1,0 +1,105 @@
+#app .workspacePage > section.directorPanel.webDirector {
+  --el-color-primary: #31df84;
+  --el-color-primary-light-3: #64e69e;
+  --el-color-primary-light-5: #2d7650;
+  --el-color-primary-light-7: #254330;
+  --el-color-primary-light-8: #21372a;
+  --el-color-primary-light-9: #1c2d23;
+  --el-color-primary-dark-2: #1dc56e;
+  --el-bg-color: #18191d;
+  --el-bg-color-overlay: #202125;
+  --el-fill-color-blank: #1c1d22;
+  --el-fill-color-light: #27292e;
+  --el-fill-color: #303238;
+  --el-text-color-primary: #eceef3;
+  --el-text-color-regular: #bdc0c8;
+  --el-text-color-secondary: #8f95a0;
+  --el-text-color-placeholder: #747a85;
+  --el-border-color: #383a41;
+  --el-border-color-light: #303238;
+  --el-border-color-lighter: #2c2e34;
+  --el-border-color-extra-light: #27292e;
+  --el-disabled-bg-color: #22242a;
+  --el-disabled-text-color: #646a75;
+  padding: 0;
+  background: #101114;
+  color: #e9ebf0;
+
+  .studioHeader { height: 64px; gap: 22px; padding: 0 22px; border-bottom: 1px solid #2c2d33;
+    .studioBrand { color: #eff1f5; gap: 9px; .brandMark { width: 29px; height: 29px; } small { color: #7f8591; font-size: 9px; letter-spacing: .4px; } > span:last-child { font-size: 16px; } }
+    .projectIdentity { border-color: #35373d; padding-left: 20px; > span { color: #747b87; font-size: 8px; } h1 { color: #e4e6ec; font-size: 13px; } }
+    .saveState { color: #838b96; font-size: 10px; }
+    .headerIcon { background: #1d1e23; border-color: #34363d; color: #9ba2ae; }
+    .headerText, .previewButton { color: #b9bec9; background: transparent; border-color: #383b43; }
+    .taskButton { gap: 6px; padding: 8px 10px; border: 1px solid #34373e; border-radius: 8px; span { color: #56e59a; font-size: 10px; } }
+    .el-button { border-radius: 8px; height: 32px; }
+    .el-button--primary { color: #082413; }
+  }
+  .exportStatus { margin: 8px 16px 0; background: #1b2820; border-color: #315641; color: #b7d3c1; }
+  .errorBanner { margin: 8px 16px 0; background: #30221d; border-color: #624633; color: #edc2a3; }
+  .studioShell { gap: 0; min-height: 0;
+    &.creativeCanvasMode { position: relative; .assetRail { display: flex; } .creativeArea { min-height: 0; } .inspector { position: relative; inset: auto; width: auto; box-shadow: none; } }
+    .assetRail, .creativeArea, .inspector { background: #17181c; border: 0; border-radius: 0; }
+    .assetRail { border-right: 1px solid #303238;
+      .railTitle { border-color: #303238; color: #d3d6de; }
+      .railLabel { color: #a0a6b0; span { color: #6f7681; } }
+      .referenceSection p, .creativeBrief p { color: #858c98; }
+      .referenceFrame { background: #23252a; }
+      .assetList button { color: #959da9; &.active { background: #252b28; } strong { color: #d0d4dd; } span { color: #8b94a2; } }
+      .creativeBrief { border-color: #303238; > strong { color: #c6cbd5; } }
+      .railBottom { border-color: #303238; color: #858d9a; }
+      .productionResources { padding: 18px 14px; border-bottom: 1px solid #303238; > button { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; border-radius: 6px; background: transparent; padding: 8px 4px; text-align: left; color: #bcc5d2; font: inherit; font-size: 12px; cursor: pointer; > span { flex: 1; } small { display: block; margin-top: 3px; color: #7f8c9e; font-size: 10px; } > svg:last-child { margin-left: auto; } .studioThumbnail, .characterInitial { flex: none; width: 30px; height: 34px; border-radius: 5px; background: #2c343f; display: grid; place-items: center; } } }
+    }
+    .creativeArea { min-width: 0;
+      .boardToolbar { height: 48px; background: #18191d; border-color: #303238; padding: 0 16px; }
+      .workspaceTabs { gap: 4px; > button { color: #939aa6; font-size: 12px; padding: 8px 11px; border-radius: 7px; &.active { background: #2a2c32; color: #f1f3f7; } } }
+      .boardActions { color: #858e9b; gap: 13px; .toggleInspector { display: flex; align-items: center; gap: 5px; color: #bec5d0; font-size: 11px; } }
+      .canvasTimelineToggle { display: flex; align-items: center; gap: 5px; border: 1px solid #3a3d45; border-radius: 6px; padding: 5px 8px; background: #24262c; color: #a6aebb; font-size: 10px; cursor: pointer; &[aria-pressed="true"] { color: #61dfa0; } }
+      .workspaceStage.previewWorkspace { background: #101115; }
+      .emptyEdit { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; color: #848c98; padding: 40px; h2 { font-size: 21px; font-weight: 500; margin: 18px 0 0; color: #e6e8ef; } p { font-size: 12px; margin: 14px 0 24px; } .el-button { margin: 0 0 8px; } }
+    }
+    .inspector { border-left: 1px solid #303238; min-width: 0;
+      .inspectorTabs { height: 48px; gap: 24px; border-color: #303238; button { color: #8b93a0; font-size: 12px; &.active { color: #dce3ed; border-color: #37db85; } } }
+      .inspectorContent { padding: 18px; color: #bfc5d0; }
+      .agentWorkspace { display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+      .liveAgent { display: flex; flex: 1; flex-direction: column; min-height: 250px; overflow: hidden; .agentContext { display: flex; align-items: center; gap: 6px; padding: 12px 15px; font-size: 10px; color: #98a2af; border-bottom: 1px solid #2b2e34; span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } small { color: #707b88; font-size: 9px; } } .agent { flex: 1; height: auto; min-height: 0; background: #17181c; } }
+      .planCard { margin: 12px; max-height: 44%; overflow: auto; flex-shrink: 0; background: #1e2420; border-color: #3a5042; border-radius: 10px; color: #bdcec2; .planHeading > span, .planChange .changeTitle strong { color: #c6d8cd; } .planChange { border-color: #35423a; } .planChange dl dd { color: #b8c9bf; } .planInstruction, .preserveNote { color: #92a79a; } .el-button--primary { color: #082914; } }
+      .contextChip, .agentSymbol { background: #232b27; color: #b4cbbd; }
+      .detailTitle { color: #e3e7ee; }
+      .detailDescription, .detailMeta p, .detailSubtitle p { color: #a3adbc; }
+      .detailHeading > button, .detailCast > span, .timingOverview { background: #24272d; border-color: #3b414b; color: #b7c2d1; }
+      .continuityStates, .continuityStates > div + div, .detailMeta, .reorderActions, .detailAssets { border-color: #30353d; }
+      .musicFile, .musicUpload { background: #242830; border-color: #3a4351; color: #b7c8de; }
+      .inspectorFooter { background: #191b20; border-color: #303238; color: #808b9b; }
+    }
+  }
+  .productionPanel { background: #17191d; color: #d6dae3;
+    .productionHeading h2 { color: #e8ebf1; } .productionHeading p, .sectionHeading p { color: #929ca9; }
+    .productionTabs { border-color: #343942; button { background: #252a32; color: #a4afbf; &.active { background: #273a2e; color: #66e69d; } } }
+    .stateBadge { background: #2a3038; color: #a6b4c6; &.confirmed { background: #223a2b; color: #6adf9d; } }
+    .sceneCard, .workflowCard, .deliveryCard, .bindingEditor { background: #20242b; border-color: #363e4a; }
+    .sceneCard .sceneHeading, .sceneCard > label, .editorFields > label, .fieldRow > label { color: #b0bbcb; }
+    select { background: #292f39; border-color: #424e5e; color: #d0d9e7; }
+    .primaryButton { background: #31df84; color: #082614; }
+    .secondaryButton { background: #2b323d; border-color: #465366; color: #c0ccdf; }
+    .textButton { color: #72dca1; }
+    .panelMessage { background: #213129; border-color: #395346; color: #b8d1c2; &.errorMessage { background: #34271f; border-color: #68503c; color: #efc4a0; } }
+    .referenceEditor, .characterList button, .reviewShotList button { background: #242b34; color: #a9b7cb; &.active { background: #2b3c32; border-color: #46624f; color: #9addb6; } }
+    .referenceEmpty { background: #2d3541; border-color: #4a586d; color: #a6b5cd; }
+    .characterInitial { background: #354a3d; }
+    .historyDetails, .bindingDetails, .historyDetails > div, .reviewChecks { border-color: #3b4656; }
+    .historyDetails summary, .bindingDetails summary, .reviewChecks legend { color: #bbc9dc; }
+    .bindingList button { background: #2b3542; border-color: #47576d; color: #b5c7df; }
+    .hintText, .workflowCard p, .deliveryCard p { color: #96a5b9; }
+    .readyText { color: #65dfa0; } input[type="checkbox"] { accent-color: #31df84; }
+  }
+  .studioPreview { background: #17191e; color: #a3adbc; border-color: #343b46; .previewHeading { color: #bdc6d4; small { color: #768396; } } .previewStage { background: #0e1014; } .previewTransport { color: #bdc9db; .playButton { background: #d5e5da; color: #193c27; } .soundButton { color: #9aaabd; } } .previewFootnote, .previewFootnote span { color: #8392a7; } .previewSeek { accent-color: #65d99a; } }
+  @media (max-width: 1050px) { .studioHeader .saveState, .studioHeader .studioBrand small, .readyCount { display: none; } .studioHeader { padding-inline: 14px; } .studioShell { grid-template-columns: minmax(0, 1fr) !important; .assetRail { display: none !important; } .inspector { position: absolute; top: 112px; right: 0; bottom: 0; width: min(360px, 88vw); z-index: 20; box-shadow: -12px 0 40px #0006; } } }
+}
+
+body:has(.webDirector) .studioDialog, body:has(.webDirector) .studioTaskDrawer, body:has(.webDirector) .el-select__popper {
+  --el-color-primary: #31df84; --el-bg-color: #1c1e24; --el-bg-color-overlay: #24272f; --el-dialog-bg-color: #1c1e24; --el-drawer-bg-color: #1c1e24; --el-fill-color-blank: #262a32; --el-fill-color-light: #303640; --el-text-color-primary: #e2e8f2; --el-text-color-regular: #b3c0d3; --el-text-color-secondary: #8a9bb2; --el-border-color: #46536a; color: #c9d4e6;
+  .exportOverview { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 20px; strong { color: #e7edf6; font-weight: 500; } span { color: #9daec4; font-size: 12px; } }
+  .exportRatio { display: flex; align-items: center; gap: 15px; margin: 15px 0; font-size: 12px; select { flex: 1; background: #262b35; border: 1px solid #414d60; border-radius: 7px; color: #c8d5e8; padding: 9px; font: inherit; } }
+  .deliveryBlockers { margin-top: 20px; padding: 14px; border: 1px solid #4c4435; background: #29261f; border-radius: 9px; h4 { color: #cfb994; font-size: 12px; margin: 0 0 10px; font-weight: 500; } button { display: flex; align-items: center; gap: 6px; width: 100%; padding: 7px 0; border: 0; background: none; color: #b7a78e; text-align: left; cursor: pointer; font: inherit; font-size: 12px; > svg:last-child { margin-left: auto; flex-shrink: 0; } } }
+}

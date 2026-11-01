@@ -1,0 +1,8 @@
+演示素材来源：2026-10-24 使用内置 imagegen 生成，作为预置静态分镜使用。并非本应用调用用户的图片或视频 API 生成的结果。
+四张图均为独立生成，杯子外观可能有差异，不代表已经验证跨镜头一致性。
+提示词共用：Use case: product-mockup. Asset type: a preloaded demonstration keyframe for a video director application. ONE photorealistic portrait 9:16 coffee film still. Filmic natural texture, amber morning light, ivory porcelain coffee cup, walnut counter. No typography, no watermark, no interface, no collage.
+morning.png: Wide editorial shot, cup beside pour-over dripper and window.
+pour.png: Extreme closeup, amber coffee drops falling into cup.
+steam.png: Macro of cup rim with steam in morning side light.
+finish.png: Hero product shot of cup with coffee beans and blurred cafe background.
+ambient.wav：为演示制作的20秒合成器琶音配乐，不含第三方采样。
