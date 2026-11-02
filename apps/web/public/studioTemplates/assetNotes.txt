@@ -1,0 +1,38 @@
+CinePilot 模板库封面素材说明
+日期：2026-11-02
+来源：通过 Codex 内置 imagegen 工具逐张生成的原创视觉示意图；未调用用户配置的图片或视频 API，未复制第三方网站封面。
+用途：展示模板的视觉方向，不是 CinePilot 对应模板完整流程的实测输出，也不是视频预览。不承诺模板运行会复现同一画面。
+格式：PNG 方图，原始生成文件直接复制；未裁剪、改色或合成。
+视觉检查：10 张均已逐张查看主体、方图构图及无标题/水印；角色四视图为同一张示意设定页，六格分镜为单张示意图，不代表已完成跨镜头一致性验证。
+
+生成提示词（原文）
+
+coffeeMoment.png
+Use case: ads-marketing. Asset type: square 1024x1024 cinematic creative-template cover for a premium dark video studio. A simple handmade ivory ceramic cup of black coffee on dark walnut wood beside a tall cafe window at dawn, amber sunbeams illuminate delicate curling steam, deep warm shadows, subtle coffee beans and blurred cafe bokeh, exquisite tactile materials, close-up centered hero composition, professional food advertising photograph, cinematic film grain and rich contrast, no text, no letters, no watermark, no logo, full-bleed square.
+
+productOrbit.png
+Use case: product-mockup. Asset type: premium cinematic square 1024x1024 creative-template cover. An elegant pair of unbranded black and polished silver over-ear wireless headphones suspended above a sleek black pedestal, emerald green rim lighting tracing the metallic contours, deep black studio background with restrained atmospheric smoke, dramatic advertisement, finely detailed leather and brushed aluminum, centered sculptural composition, sophisticated and clean, no text, no watermark, no logo, full-bleed square.
+
+rainyReunion.png
+Use case: illustration-story. Asset type: square 1024x1024 cinematic anime film template cover. Two original adult East Asian characters, a woman with long dark hair in a cream coat and a man in a dark coat, facing each other close together under a single clear umbrella at the entrance of a rainy nighttime train station. Their eyes meet with restrained longing. Cyan and pink city light reflected in raindrops and wet pavement, elegant richly painted 2D anime cinematic artwork, intimate medium shot, readable central silhouettes, beautiful depth of field and atmospheric rain, no text, no signage lettering, no logos, no watermark, full-bleed square.
+
+wuxiaEntrance.png
+Use case: historical-scene. Asset type: square 1024x1024 premium cinematic creative-template cover. Original Chinese wuxia heroine, an adult woman with strong elegant features, tied black hair and flowing dark emerald robes, a sheathed sword across her back, standing among towering bamboo in drifting mist, looking sideways with fierce calm, green bamboo forest shafts of light and floating leaves, realistic cinema still with tactile embroidered silk and subtle film grain, waist-up powerful centered composition, atmospheric jade and warm skin palette, no text, no logos, no watermark, full-bleed square.
+
+characterPortrait.png
+Use case: photorealistic-natural. Asset type: square 1024x1024 cinematic character-design template cover. An original young adult Chinese woman with a short black bob haircut, an intelligent self-possessed expression, wearing a practical futuristic black jacket with restrained crimson panels and subtle technical seams. Half-body portrait against a defocused rainy industrial night city, red side light and cool blue rim light, no weapons, detailed natural skin texture, premium sci-fi film casting portrait, strong centered composition and tactile fabric, no text, no logos, no watermark, full-bleed square.
+
+characterTurnaround.png
+Use case: illustration-story. Asset type: square 1024x1024 character turnaround design sheet cover. Exactly four full-body views arranged neatly in one horizontal row of the SAME original adult female anime explorer: front, three-quarter, side profile, back. Silver bob haircut, cropped sage-green practical jacket over cream shirt, charcoal utility trousers, brown hiking boots, small tan satchel, refined anime concept design, consistent face/hair/outfit/body across all views, upright relaxed neutral standing poses with separated limbs, subtle contact shadows, warm pale ivory studio background, clean rich professional character design, no labels, no text, no logo, no watermark, square image.
+
+forestWorld.png
+Use case: stylized-concept. Asset type: square 1024x1024 cinematic fantasy environment template cover. A monumental ancient tree growing from the edge of a towering cliff, an intricate warm-lit wooden treehouse settlement woven around its trunk and branches, rope bridges fading into an emerald bioluminescent forest beneath, giant ferns and tiny fireflies, luminous river far below, spectacular vertical depth, mysterious evening haze and jade light with golden windows, realistic lush fantasy film environment concept art, centered majestic silhouette, astonishing detail and rich contrast, no people close-up, no text, no logos, no watermark, full-bleed square.
+
+comicStoryboard.png
+Use case: illustration-story. Asset type: square 1024x1024 six-panel cinematic comic storyboard cover. Precisely SIX rectangular panels in a regular TWO-column by THREE-row grid with thin white gutters. A single consistent original adult woman wearing a yellow raincoat, short brown hair, accompanied by a small cream-colored friendly robot, discovers a glowing envelope in an abandoned train station. Panel 1 wide establishing deserted station. Panel 2 medium shot woman and robot entering. Panel 3 close-up robot noticing green glow under a bench. Panel 4 close-up woman's hand lifting a glowing envelope. Panel 5 intimate reaction two-shot. Panel 6 wide shot they leave toward dawn through platform arches. Refined atmospheric anime storyboarding, teal shadows, warm yellow raincoat, beautiful coherent scene continuity and varied camera distances. No speech balloons, no labels, no text, no logos, no watermark.
+
+foodMacro.png
+Use case: ads-marketing. Asset type: square 1024x1024 premium cinematic food advertisement template cover. Macro close-up of a rich bowl of freshly made ramen, wooden chopsticks lifting a graceful bundle of glossy golden noodles into delicate steam, broth with a halved soft egg and scallions and a small amount of charred meat visible below, golden backlight catching steam, dark warm blurred restaurant background, rich appetizing color and extraordinary real food textures, commercial food photography, strong central composition, no faces or hands, no text, no logos, no watermark, full-bleed square.
+
+spaceSignal.png
+Use case: photorealistic-natural. Asset type: square 1024x1024 cinematic space suspense template cover. Intimate straight-on close-up of an original adult female astronaut inside a realistic worn white spacesuit helmet in a dark abandoned starship, her alert worried eyes reflect a tiny mysterious green signal, subtle green light across the clear visor and natural face, deep navy space and blurred spacecraft panels behind her, exquisite glass reflections and tactile helmet scratches, restrained high-budget sci-fi film still, centered dramatic portrait, no lettering on suit or background, no text, no logos, no watermark, full-bleed square.

@@ -55,7 +55,7 @@ import anonymousData from "@/lib/anonymousData";
 import { modelChoices } from "@/stores/settings";
 import { useWorkspaceStore } from "@/stores/workspace";
 import type { AgentAttachment, AgentConversation, AgentMessage } from "./types";
-import type { AgentEvent } from "@toonflow/server/agent/types";
+import type { AgentEvent, AgentMention } from "@toonflow/server/agent/types";
 import { createConversationStream, readAgentEvents } from "./replyStream";
 import { mentionPlainText } from "./mentionText";
 import type { CanvasContext } from "@toonflow/tool-canvas/runtime";
@@ -113,7 +113,12 @@ function receiveEvent(event: AgentEvent) {
   applyEvent(event);
 }
 
-defineExpose({ receiveEvent });
+async function fillMessage(prompt: string, attachments: AgentAttachment[] = [], mentions: AgentMention[] = []) {
+  if (!input.value || locked.value || props.initialSession?.parentFile) throw new Error("当前对话暂时不能输入，请先结束编辑或返回主对话");
+  await input.value.appendPrompt(prompt, attachments, mentions);
+}
+
+defineExpose({ receiveEvent, fillMessage });
 
 function submitMessage() {
   return sendMessage(editingId.value ? messages.value.find(item => item.id === editingId.value) : undefined);

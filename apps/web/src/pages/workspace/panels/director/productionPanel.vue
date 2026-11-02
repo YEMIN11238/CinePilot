@@ -26,8 +26,9 @@
       </section>
 
       <section v-else-if="activeTab === 'characters'" class="characterStage">
-        <div class="sectionHeading"><div><h3>角色档案</h3><p>固定外貌与服装分别维护。修改档案后，需要重新确认角色及相关分镜。</p></div><span class="stateBadge" :class="{ confirmed: charactersConfirmed }">{{ confirmedCharacterCount }}/{{ workflow.characters.length }} 已确认</span></div>
-        <div class="characterLayout"><aside class="characterList"><button v-for="character in workflow.characters" :key="character.id" :class="{ active: character.id === characterId }" type="button" @click="selectCharacter(character.id)"><span class="characterInitial">{{ character.name.slice(0, 1) }}</span><span><strong>{{ character.name }}</strong><small>V{{ character.revision }} · {{ character.confirmedAt ? '已确认' : '待确认' }}</small></span></button></aside>
+        <div class="sectionHeading"><div><h3>角色档案</h3><p>固定外貌与服装分别维护。修改档案后，需要重新确认角色及相关分镜。</p></div><span class="stateBadge" :class="{ confirmed: charactersConfirmed }">{{ workflow.characters.length ? `${confirmedCharacterCount}/${workflow.characters.length} 已确认` : "无人出镜" }}</span></div>
+        <p v-if="!workflow.characters.length" class="hintText">本片未设置出场角色，可在确认剧本后直接规划分镜。</p>
+        <div v-else class="characterLayout"><aside class="characterList"><button v-for="character in workflow.characters" :key="character.id" :class="{ active: character.id === characterId }" type="button" @click="selectCharacter(character.id)"><span class="characterInitial">{{ character.name.slice(0, 1) }}</span><span><strong>{{ character.name }}</strong><small>V{{ character.revision }} · {{ character.confirmedAt ? '已确认' : '待确认' }}</small></span></button></aside>
           <fieldset class="characterEditor editorFields" :disabled="blocked">
             <div class="referenceEditor"><studioThumbnail v-if="characterDraft.referenceImage" :directory="directory" :path="characterDraft.referenceImage.path" :mimeType="characterDraft.referenceImage.mimeType" label="角色参考图" /><div v-else class="referenceEmpty">角色参考图</div><div><h4>{{ characterDraft.name || '角色档案' }}</h4><button class="secondaryButton" type="button" @click="referenceInput?.click()">{{ characterDraft.referenceImage ? '更换参考图' : '上传参考图' }}</button><button v-if="characterDraft.referenceImage" class="textButton" type="button" @click="delete characterDraft.referenceImage">移除参考图</button><p>媒体生成需要角色参考图及明确的来源授权。</p><label v-if="characterDraft.referenceImage" class="rightsField">素材来源<select v-model="characterDraft.referenceImage.rights"><option value="unverified">待核验</option><option value="owned">自行创作／拥有权利</option><option value="licensed">已取得使用授权</option></select></label></div></div>
             <div class="fieldRow"><label>角色名称<el-input v-model="characterDraft.name" maxlength="80" /></label><label>固定外貌<el-input v-model="characterDraft.appearance" type="textarea" :rows="2" maxlength="2000" /></label></div>
@@ -38,7 +39,7 @@
           </fieldset>
         </div>
         <input ref="referenceInput" class="fileInput" type="file" accept="image/*" @change="uploadReference" />
-        <div class="stageActions"><button class="primaryButton" type="button" :disabled="blocked || characterDirty || charactersConfirmed || !script?.confirmedAt" @click="confirmCharacters">确认全部角色</button><button v-if="characterDirty" class="textButton" type="button" :disabled="blocked" @click="selectCharacter(characterId)">撤销当前角色修改</button><span v-if="characterDirty">请先保存当前角色修改</span><span v-else-if="!script?.confirmedAt">请先确认当前剧本版本</span></div>
+        <div v-if="workflow.characters.length" class="stageActions"><button class="primaryButton" type="button" :disabled="blocked || characterDirty || charactersConfirmed || !script?.confirmedAt" @click="confirmCharacters">确认全部角色</button><button v-if="characterDirty" class="textButton" type="button" :disabled="blocked" @click="selectCharacter(characterId)">撤销当前角色修改</button><span v-if="characterDirty">请先保存当前角色修改</span><span v-else-if="!script?.confirmedAt">请先确认当前剧本版本</span></div>
       </section>
 
       <section v-else class="reviewStage">
@@ -118,13 +119,13 @@ async function saveSceneReference(sceneId: string, remove = false) {
   }
 }
 const confirmedCharacterCount = computed(() => workflow.value?.characters.filter(character => character.confirmedAt).length || 0);
-const charactersConfirmed = computed(() => !!workflow.value?.characters.length && confirmedCharacterCount.value === workflow.value.characters.length);
+const charactersConfirmed = computed(() => !!workflow.value && confirmedCharacterCount.value === workflow.value.characters.length);
 const planningReady = computed(() => !!script.value?.confirmedAt && charactersConfirmed.value);
 const boardCurrent = computed(() => {
   const board = workflow.value?.storyboard;
   return !!board && planningReady.value && board.scriptVersionId === script.value?.id && workflow.value!.characters.every(character => board.characterRevisions.some(item => item.id === character.id && item.revision === character.revision)) && props.project.shots.every(shot => board.shotVersions.some(item => item.shotId === shot.id && item.versionId === shot.currentVersionId));
 });
-const storyboardMessage = computed(() => !script.value?.confirmedAt ? "请先确认当前剧本。" : !charactersConfirmed.value ? "请先确认角色档案。" : boardCurrent.value ? "当前剧本、角色与镜头版本已确认。" : props.project.shots.length ? "已有分镜请使用逐镜检查与编辑，前序内容变化后需要重新确认。" : "剧本和角色已确认，可以开始生成分镜。");
+const storyboardMessage = computed(() => !script.value?.confirmedAt ? "请先确认当前剧本。" : !charactersConfirmed.value ? "请先确认角色档案。" : boardCurrent.value ? "当前剧本、角色与镜头版本已确认。" : props.project.shots.length ? "已有分镜请使用逐镜检查与编辑，前序内容变化后需要重新确认。" : workflow.value?.characters.length ? "剧本和角色已确认，可以开始生成分镜。" : "剧本已确认，本片无人出镜，可以开始生成分镜。");
 const bindingShotId = ref("");
 const bindingShot = computed(() => props.project.shots.find(shot => shot.id === bindingShotId.value));
 const bindingDraft = reactive({ sceneId: "", characterIds: [] as string[], startState: "", endState: "", dialogues: [] as { speakerId: string; text: string }[] });
@@ -250,8 +251,8 @@ async function saveScript() {
 }
 async function confirmScript() {
   if (await requestProject("confirmScript")) {
-    notice.value = "当前剧本已确认，请检查角色设定。";
-    activeTab.value = "characters";
+    notice.value = workflow.value?.characters.length ? "当前剧本已确认，请检查角色设定。" : "当前剧本已确认，本片无人出镜，可以继续生成分镜。";
+    activeTab.value = workflow.value?.characters.length ? "characters" : "review";
   }
 }
 async function saveCharacter() {

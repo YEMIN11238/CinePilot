@@ -36,6 +36,8 @@
     <aside v-if="selectedFree?.generation" class="nodeDock generationDock" aria-label="生成节点编辑器">
       <header><span class="dockIcon"><icon-sparkles :size="18" /></span><input v-model="draftTitle" maxlength="120" :disabled="busy" aria-label="生成节点名称" @change="saveFree" /><span class="dockType">{{ freeStatus(selectedFree.id, selectedFree) }}</span><button v-if="selectedFree.kind !== 'video'" type="button" class="downstreamButton" :aria-label="`从${selectedFree.title}创建下游节点`" :disabled="busy" @click="openDownstreamMenu($event, selectedFree.id)"><icon-plus :size="14" /><span>创建下游</span></button><button type="button" aria-label="关闭生成节点编辑器" @click="clearSelection"><icon-x :size="17" /></button></header>
       <p v-if="selectedFree.asset" class="usageSummary">{{ usedLabel(selectedFree.id) }}<span v-if="generationChanged(selectedFree.id)"> · 输入已变更，当前结果基于旧输入</span></p>
+      <div v-if="selectedFree.asset" class="resultActions" aria-label="当前结果操作"><button type="button" :disabled="busy" @click="openResultPreview"><icon-maximize :size="14" />{{ selectedFree.kind === 'video' ? '播放视频' : '放大预览' }}</button><button type="button" :disabled="busy || downloadingResult" @click="downloadSelectedResult"><icon-loader-2 v-if="downloadingResult" :size="14" class="spinner" /><icon-download v-else :size="14" />{{ downloadingResult ? '正在保存' : '下载' }}</button><template v-if="selectedFree.kind === 'image'"><button type="button" :disabled="busy || uploading" @click="openResultEdit"><icon-pencil :size="14" />继续改图</button><button type="button" :disabled="busy || uploading" @click="createFromResult('video')"><icon-movie :size="14" />用这张图生成视频</button></template></div>
+      <form v-if="selectedFree.kind === 'image' && selectedFree.asset && resultEditVisible" class="resultEdit" @submit.prevent="createFromResult('image')"><label :for="`resultEdit${flowId}`">想怎么修改这张图？</label><textarea :id="`resultEdit${flowId}`" ref="resultEditInput" v-model="resultInstruction" rows="2" maxlength="5000" :disabled="busy" placeholder="例如：把猫改成白色，保持姿势、背景和构图" aria-label="图片修改要求" @keydown.meta.enter.prevent="createFromResult('image')" @keydown.ctrl.enter.prevent="createFromResult('image')" /><div><span>保留原图，新建一个修改版本；确认后才生成。</span><button type="button" :disabled="busy" @click="resultEditVisible = false">取消</button><button type="submit" :disabled="busy || !resultInstruction.trim()">准备修改<icon-arrow-right :size="13" /></button></div></form>
       <div v-if="selectedFree.asset && usedShots(selectedFree.id).length" class="usedShotActions"><button v-for="shot in usedShots(selectedFree.id)" :key="shot.id" type="button" :disabled="busy || shot.locked || shotPending(shot.id)" @click="addSelectedToTimeline(shot.id)">{{ needsReplacement(selectedFree, shot) ? '比较并替换' : '比较素材' }}第 {{ shot.order }} 镜{{ shot.locked ? '（已锁定）' : '' }}</button></div>
       <div v-if="project.production" class="productionBinding">
         <label>用于制作<select :value="generationScopeKey" :disabled="busy || generationPending" aria-label="生成内容归属" @change="changeGenerationScope(($event.target as HTMLSelectElement).value)"><option value="">选择角色、场景或镜头</option><optgroup v-if="selectedFree.kind === 'image'" label="角色参考图"><option v-for="character in project.production.characters" :key="character.id" :value="`character:${character.id}`">{{ character.name }} · V{{ character.revision }}</option></optgroup><optgroup v-if="selectedFree.kind === 'image'" label="场景参考图"><option v-for="scene in productionScript?.scenes || []" :key="scene.id" :value="`scene:${scene.id}`">{{ scene.title }}</option></optgroup><optgroup label="分镜素材"><option v-for="shot in project.shots" :key="shot.id" :value="`shot:${shot.id}`">第 {{ shot.order }} 镜 · {{ version(shot).title }}</option></optgroup></select></label>
@@ -44,6 +46,7 @@
         <p v-if="scopeAssetHint">{{ scopeAssetHint }}</p>
       </div>
       <div class="generationReferences"><span>参考</span><button v-for="asset in generationInputs.assets" :key="asset.path" type="button" class="referenceChip" :class="{ active: generationReference?.path === asset.path }" :title="referenceLabel(asset.path)" @click="chooseGenerationReference(asset.path)"><studioThumbnail :directory="directory" :path="asset.path" :mimeType="asset.mimeType" :label="referenceLabel(asset.path)" /><span>{{ referenceLabel(asset.path) }}</span></button><button type="button" class="referenceAdd" :disabled="busy || uploading || generationPending" title="上传一张参考图并连接" @click="chooseReferenceUpload"><icon-plus :size="18" /><span>参考图</span></button></div>
+      <p v-if="selectedFree.generation.referenceOnly" class="referenceModeHint">本次使用选中的参考图与下面的要求，保留原始结果。</p>
       <textarea v-model="draftText" maxlength="6000" :disabled="busy || generationPending" rows="3" placeholder="描述主体、动作、场景和镜头运动…" aria-label="生成提示词" @change="saveFree" />
       <p v-if="generationInputs.text" class="upstreamText"><icon-link :size="12" />将合并上游文字：{{ generationInputs.text.slice(0, 140) }}{{ generationInputs.text.length > 140 ? '…' : '' }}</p>
       <div class="generationSettings"><label><span>模型</span><select :value="selectedModelKey" :disabled="busy || generationPending" aria-label="生成模型" @change="changeGenerationModel(($event.target as HTMLSelectElement).value)"><option value="">选择模型</option><option v-for="model in generationModels" :key="modelKey(model)" :value="modelKey(model)">{{ model.providerLabel }} · {{ model.label }}{{ configuredProviders?.includes(model.providerId) ? '' : ' · 待配置' }}</option></select></label><label><span>画幅</span><select :value="selectedFree.generation.ratio" :disabled="busy || generationPending" aria-label="生成画幅" @change="updateGeneration({ ratio: ($event.target as HTMLSelectElement).value as '16:9' | '9:16' | '1:1' })"><option v-for="ratio in generationRatios" :key="ratio" :value="ratio">{{ ratio }}</option></select></label><label v-if="selectedFree.kind === 'video'"><span>时长</span><select :value="selectedFree.generation.duration" :disabled="busy || generationPending" aria-label="生成时长" @change="updateGeneration({ duration: Number(($event.target as HTMLSelectElement).value) as 5 | 10 })"><option v-for="duration in generationDurations" :key="duration" :value="duration">{{ duration }}s</option></select></label><label v-if="generationResolutions.length"><span>分辨率</span><select :value="selectedFree.generation.model?.resolution || ''" :disabled="busy || generationPending" aria-label="生成分辨率" @change="changeGenerationResolution(($event.target as HTMLSelectElement).value)"><option value="">默认</option><option v-for="value in generationResolutions" :key="value" :value="value">{{ value }}</option></select></label></div>
@@ -57,6 +60,8 @@
       <header><span class="dockIcon"><component :is="kindIcon(selectedFree.kind)" :size="18" /></span><input v-model="draftTitle" maxlength="120" :disabled="busy" aria-label="节点名称" @change="saveFree" /><span class="dockType">{{ kindLabel(selectedFree.kind) }}</span><button v-if="selectedFree.kind !== 'video'" type="button" class="downstreamButton" :aria-label="`从${selectedFree.title}创建下游节点`" :disabled="busy" @click="openDownstreamMenu($event, selectedFree.id)"><icon-plus :size="14" /><span>创建下游</span></button><button type="button" aria-label="关闭节点编辑器" @click="clearSelection"><icon-x :size="17" /></button></header>
       <textarea v-if="selectedFree.kind === 'text'" v-model="draftText" maxlength="6000" :disabled="busy" rows="3" placeholder="描述角色、场景或镜头。连接到镜头后，可作为画面描述应用。" aria-label="文本节点内容" @change="saveFree" />
       <p v-if="selectedFree.asset" class="usageSummary">{{ usedLabel(selectedFree.id) }}</p><div v-if="selectedFree.asset && usedShots(selectedFree.id).length" class="usedShotActions"><button v-for="shot in usedShots(selectedFree.id)" :key="shot.id" type="button" :disabled="busy || shot.locked || shotPending(shot.id)" @click="addSelectedToTimeline(shot.id)">比较并替换第 {{ shot.order }} 镜</button></div>
+      <div v-if="selectedFree.asset" class="resultActions" aria-label="当前结果操作"><button type="button" :disabled="busy" @click="openResultPreview"><icon-maximize :size="14" />{{ selectedFree.kind === 'video' ? '播放视频' : '放大预览' }}</button><button type="button" :disabled="busy || downloadingResult" @click="downloadSelectedResult"><icon-loader-2 v-if="downloadingResult" :size="14" class="spinner" /><icon-download v-else :size="14" />{{ downloadingResult ? '正在保存' : '下载' }}</button><template v-if="selectedFree.kind === 'image'"><button type="button" :disabled="busy || uploading" @click="openResultEdit"><icon-pencil :size="14" />继续改图</button><button type="button" :disabled="busy || uploading" @click="createFromResult('video')"><icon-movie :size="14" />用这张图生成视频</button></template></div>
+      <form v-if="selectedFree.kind === 'image' && selectedFree.asset && resultEditVisible" class="resultEdit" @submit.prevent="createFromResult('image')"><label :for="`resultEdit${flowId}`">想怎么修改这张图？</label><textarea :id="`resultEdit${flowId}`" ref="resultEditInput" v-model="resultInstruction" rows="2" maxlength="5000" :disabled="busy" placeholder="例如：把猫改成白色，保持姿势、背景和构图" aria-label="图片修改要求" @keydown.meta.enter.prevent="createFromResult('image')" @keydown.ctrl.enter.prevent="createFromResult('image')" /><div><span>保留原图，新建一个修改版本；确认后才生成。</span><button type="button" :disabled="busy" @click="resultEditVisible = false">取消</button><button type="submit" :disabled="busy || !resultInstruction.trim()">准备修改<icon-arrow-right :size="13" /></button></div></form>
       <div v-if="selectedFree.kind !== 'text'" class="mediaDockBody"><div><strong>{{ selectedFree.asset ? '素材可以沿连线用于镜头' : `导入${kindLabel(selectedFree.kind)}素材` }}</strong><p>{{ selectedFree.asset ? `${selectedFree.title} · 工作区${kindLabel(selectedFree.kind)}素材` : '导入不会调用模型；连接到生成节点或镜头后继续创作。' }}</p></div><button class="dockSecondary" type="button" :disabled="busy || uploading" @click="chooseUpload(selectedFree.id, selectedFree.kind)"><icon-upload :size="15" />{{ selectedFree.asset ? '替换素材' : '导入素材' }}</button></div>
       <footer><span>{{ outgoingCount(selectedFree.id) ? `已连接 ${outgoingCount(selectedFree.id)} 个下游节点` : '拖动右侧连接点，将它连接到镜头' }}</span><button v-if="selectedFree.asset" type="button" class="dockPrimary" :disabled="busy" @click="addSelectedToTimeline()">{{ usedShots(selectedFree.id).length ? '另加一镜' : project.production ? '绑定或插入镜头' : '加入成片' }}<icon-plus :size="12" /></button><button v-if="selectedFree.kind === 'text'" class="dockPrimary" type="button" :disabled="busy || !freeDirty" @click="saveFree">保存内容<icon-check :size="13" /></button></footer>
     </aside>
@@ -71,6 +76,7 @@
 
     <p v-if="error || notice" class="canvasNotice" :class="{ error: !!error }" role="status">{{ error || notice }}<button type="button" aria-label="关闭画布提示" @click="notice = ''; if (!dirty) error = ''"><icon-x :size="13" /></button></p>
     <input ref="uploadInput" type="file" :accept="uploadKind + '/*'" class="fileInput" @change="uploadMedia" />
+    <el-dialog v-model="resultPreviewVisible" :title="resultPreview?.title || '素材预览'" width="min(1080px, calc(100vw - 32px))" appendToBody destroyOnClose class="studioDialog" @closed="resultPreview = undefined"><mediaPreview v-if="resultPreviewVisible && resultPreview" class="resultPreviewMedia" :directory="resultPreview.directory" :path="resultPreview.asset.path" :mimeType="resultPreview.asset.mimeType" :label="resultPreview.title" /></el-dialog>
   </section>
 </template>
 
@@ -78,7 +84,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { VueFlow, Handle, Position, useVueFlow, type Node, type Edge, type Connection, type NodeMouseEvent } from "@vue-flow/core";
 import { Background } from "@vue-flow/background";
-import { IconPlus, IconMinus, IconMaximize, IconTrash, IconCopy, IconPhoto, IconMovie, IconFileText, IconUpload, IconArrowUp, IconArrowUpRight, IconArrowRight, IconArrowBackUp, IconArrowForwardUp, IconCheck, IconX, IconLink, IconPencil, IconHistory, IconLock, IconLockOpen, IconSparkles, IconPlayerPlay, IconPlayerPlayFilled, IconLoader2, IconLayoutGrid } from "@tabler/icons-vue";
+import { IconPlus, IconMinus, IconMaximize, IconTrash, IconCopy, IconPhoto, IconMovie, IconFileText, IconUpload, IconDownload, IconArrowUp, IconArrowUpRight, IconArrowRight, IconArrowBackUp, IconArrowForwardUp, IconCheck, IconX, IconLink, IconPencil, IconHistory, IconLock, IconLockOpen, IconSparkles, IconPlayerPlay, IconPlayerPlayFilled, IconLoader2, IconLayoutGrid } from "@tabler/icons-vue";
 import type { DirectorAsset, DirectorGenerationInput, DirectorProject, DirectorShot, ShotVersion } from "@toonflow/server/directorTypes";
 import type { CanvasContext, MediaModel, NodeToolInfo } from "@toonflow/tools-scaffold/runtime";
 import { canvasSchemas } from "@toonflow/tool-canvas/runtime";
@@ -86,6 +92,8 @@ import { directorError, uploadDirectorFile } from "./api";
 import { emptyCreativeGraph, readCreativeGraph, type CreativeGraph, type CreativeKind, type CreativeNode, type CreativeGeneration } from "./creativeGraph";
 import studioThumbnail from "./studioThumbnail.vue";
 import mediaPreview from "./mediaPreview.vue";
+import useWorkspaceFiles from "@/lib/workspaceFiles";
+import saveFile from "@/lib/saveFile";
 import { createCanvasQueries, isCanvasRead } from "../canvas/canvasQueries";
 import "@vue-flow/core/dist/style.css";
 import "@vue-flow/core/dist/theme-default.css";
@@ -110,6 +118,12 @@ const selectedFree = computed(() => graph.value.nodes.find(node => node.id === s
 const selectedShot = computed(() => props.project.shots.find(shot => `shot:${shot.id}` === selectedNodeId.value));
 const draftTitle = ref("");
 const draftText = ref("");
+const resultEditVisible = ref(false);
+const resultInstruction = ref("");
+const resultEditInput = ref<HTMLTextAreaElement>();
+const downloadingResult = ref(false);
+const resultPreviewVisible = ref(false);
+const resultPreview = ref<{ directory: string; title: string; asset: { path: string; mimeType: string } }>();
 const freeDirty = computed(() => !!selectedFree.value && (draftTitle.value !== selectedFree.value.title || draftText.value !== selectedFree.value.text));
 const menu = ref<{ x: number; y: number; flowX: number; flowY: number; source?: string }>();
 const zoomKey = /Mac|iPhone|iPad/.test(navigator.platform) ? "Meta" : "Control";
@@ -201,6 +215,7 @@ async function flushSave(): Promise<void> {
 function savePositions() { graph.value.positions = Object.fromEntries(nodes.value.map(node => [node.id, { ...node.position }])); changed(); }
 function selectNode(id: string) {
   if (freeDirty.value) saveFree();
+  if (id !== selectedNodeId.value) { resultEditVisible.value = false; resultInstruction.value = ""; }
   selectedNodeId.value = id; menu.value = undefined;
   nodes.value.forEach(node => { node.selected = node.id === id; node.zIndex = node.id === id ? 100 : node.type === "creative" ? 20 : 1; });
   const free = graph.value.nodes.find(node => node.id === id); draftTitle.value = free?.title || ""; draftText.value = free?.text || ""; inputAssetPath.value = "";
@@ -210,7 +225,7 @@ function onNodeClick(event: NodeMouseEvent) {
   if (event.event.shiftKey) { selectedNodeId.value = ""; menu.value = undefined; return; }
   selectNode(event.node.id);
 }
-function clearSelection() { if (freeDirty.value) saveFree(); selectedNodeId.value = ""; menu.value = undefined; nodes.value.forEach(node => { node.selected = false; node.zIndex = node.type === "creative" ? 20 : 1; }); }
+function clearSelection() { if (freeDirty.value) saveFree(); selectedNodeId.value = ""; resultEditVisible.value = false; resultInstruction.value = ""; menu.value = undefined; nodes.value.forEach(node => { node.selected = false; node.zIndex = node.type === "creative" ? 20 : 1; }); }
 function openMenuAt(clientX: number, clientY: number, source?: string) {
   if (!ready.value || props.busy || !canvasRoot.value) return;
   const bounds = canvasRoot.value.getBoundingClientRect(); const point = flow.screenToFlowCoordinate({ x: clientX, y: clientY });
@@ -248,8 +263,55 @@ async function revealNewNode(id: string) {
   const height = node.dimensions.height || 285;
   if (screenX < 76 || screenX + 286 * zoom > bounds.width - 20 || screenY < 50 || screenY + height * zoom > bottom) {
     const targetZoom = Math.max(0.25, Math.min(zoom, (bottom - 58) / height));
-    void flow.setViewport({ x: bounds.width / 2 - (node.position.x + 143) * targetZoom, y: 58 + (bottom - 58) / 2 - (node.position.y + height / 2) * targetZoom, zoom: targetZoom }, { duration: 160 });
+    await flow.setViewport({ x: bounds.width / 2 - (node.position.x + 143) * targetZoom, y: 58 + (bottom - 58) / 2 - (node.position.y + height / 2) * targetZoom, zoom: targetZoom }, { duration: 160 });
   }
+}
+function defaultGeneration(kind: "image" | "video", ratio = props.project.ratio): CreativeGeneration {
+  const configured = (props.mediaModels || []).filter(model => model.type === kind && props.configuredProviders?.includes(model.providerId));
+  const preferred = props.project.models[kind];
+  const selected = configured.find(model => preferred && model.providerId === preferred.providerId && model.modelId === preferred.modelId) || configured[0];
+  if (!selected) return { ratio, duration: 5 };
+  const model = preferred?.providerId === selected.providerId && preferred.modelId === selected.modelId ? { ...preferred } : { providerId: selected.providerId, modelId: selected.modelId, ...(selected.imageSizes?.[0] ? { size: selected.imageSizes[0] } : {}) };
+  const allowedRatios = selected.imageRatios?.filter(value => ["16:9", "9:16", "1:1"].includes(value));
+  const durations = selected.durationResolutionMap?.flatMap(item => item.duration).filter(value => value === 5 || value === 10);
+  return { model, ratio: allowedRatios?.length && !allowedRatios.includes(ratio) ? allowedRatios[0] as CreativeGeneration["ratio"] : ratio, duration: durations?.length && !durations.includes(5) ? durations[0] as 5 | 10 : 5 };
+}
+function openResultPreview() {
+  const node = selectedFree.value; if (!node?.asset) return;
+  resultPreview.value = { directory: props.directory, title: node.title, asset: { ...node.asset } }; resultPreviewVisible.value = true;
+}
+async function downloadSelectedResult() {
+  const node = selectedFree.value; if (!node?.asset || downloadingResult.value) return;
+  const directory = props.directory; const asset = { ...node.asset }; const token = generation;
+  const extension = asset.path.split("/").at(-1)?.split(".").at(-1)?.replace(/[^a-zA-Z0-9]/g, "") || (node.kind === "image" ? "png" : "mp4");
+  const title = node.title.replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_").slice(0, 100) || "CinePilot";
+  downloadingResult.value = true;
+  try {
+    const saved = await saveFile(async () => new Blob([await useWorkspaceFiles(directory).read(asset.path)], { type: asset.mimeType }), `${title}.${extension}`);
+    if (token === generation) notice.value = saved ? "素材已保存。" : "已取消保存，素材仍保留在项目中。";
+  } catch (cause) { if (token === generation) notice.value = directorError(cause); }
+  finally { if (token === generation) downloadingResult.value = false; }
+}
+async function openResultEdit() {
+  if (props.busy || selectedFree.value?.kind !== "image" || !selectedFree.value.asset) return;
+  resultEditVisible.value = true; await nextTick(); resultEditInput.value?.focus();
+}
+async function createFromResult(kind: "image" | "video") {
+  const source = selectedFree.value; if (!ready.value || props.busy || uploading.value || source?.kind !== "image" || !source.asset || kind === "image" && !resultInstruction.value.trim()) return;
+  if (graph.value.nodes.length >= 150 || edges.value.length >= 400) { notice.value = "画布节点或连线已达上限，请先精简画布。"; return; }
+  if (freeDirty.value) saveFree();
+  const text = kind === "image" ? `以直接连接的参考图为基础进行修改。保持未提及的主体特征、构图和画面内容，只按以下要求修改：\n${resultInstruction.value.trim()}` : "保持参考图中的主体外观与场景，镜头缓慢推进，生成自然、连续的动作。";
+  const position = openPosition({ x: (flow.findNode(source.id)?.position.x ?? source.position.x) + 350, y: flow.findNode(source.id)?.position.y ?? source.position.y }, kind);
+  const settings = defaultGeneration(kind, source.generation?.ratio || props.project.ratio);
+  const scope = source.generation?.scope;
+  remember();
+  const id = crypto.randomUUID();
+  const node: CreativeNode = { id, kind, title: `${source.title.slice(0, 105)} · ${kind === "image" ? "修改版" : "视频"}`, text, position, generation: { ...settings, referencePath: source.asset.path, referenceOnly: true, ...(scope && (kind === "image" || scope.kind === "shot") ? { scope: { ...scope } } : {}) } };
+  graph.value.nodes.push(node); graph.value.positions[id] = position; graph.value.edges = [...edges.value.map(({ id, source, target }) => ({ id, source, target })), { id: crypto.randomUUID(), source: source.id, target: id }];
+  renderNodes(); selectNode(id); changed();
+  notice.value = kind === "image" ? "修改要求已准备，原图保留。检查参数后点击确认生成。" : "已用这张图准备视频节点。可修改动作和时长，确认后生成。";
+  try { await flushSave(); await revealNewNode(id); }
+  catch (cause) { notice.value = directorError(cause); }
 }
 function addNode(kind: CreativeKind, generate = false) {
   if (!ready.value || props.busy) return;
@@ -259,8 +321,8 @@ function addNode(kind: CreativeKind, generate = false) {
   const preferred = menu.value ? { x: menu.value.flowX, y: menu.value.flowY } : flow.screenToFlowCoordinate({ x: bounds.left + bounds.width / 2 - 120, y: bounds.top + bounds.height / 2 - 90 }); const source = menu.value?.source;
   const point = source ? preferred : openPosition(preferred, kind);
   remember();
-  const id = crypto.randomUUID(); const model = kind === "text" ? undefined : props.project.models[kind];
-  graph.value.nodes.push({ id, kind, title: `${generate ? '生成' : ''}${kindLabel(kind)} ${graph.value.nodes.filter(node => node.kind === kind).length + 1}`, text: "", position: point, ...(generate && kind !== "text" ? { generation: { ratio: props.project.ratio, duration: 5 as const, ...(model ? { model: { ...model } } : {}) } } : {}) });
+  const id = crypto.randomUUID();
+  graph.value.nodes.push({ id, kind, title: `${generate ? '生成' : ''}${kindLabel(kind)} ${graph.value.nodes.filter(node => node.kind === kind).length + 1}`, text: "", position: point, ...(generate && kind !== "text" ? { generation: defaultGeneration(kind) } : {}) });
   graph.value.positions[id] = point; renderNodes();
   if (source && !connectionIssue(source, id)) { const edge = { id: crypto.randomUUID(), source, target: id }; graph.value.edges.push(edge); renderNodes(); }
   selectNode(id); changed(); void revealNewNode(id);
@@ -334,6 +396,14 @@ function initializeView() { if (!ready.value || viewInitialized || !nodes.value.
 function outgoingCount(id: string) { return edges.value.filter(edge => edge.source === id).length; }
 function collectInputs(targetId: string) {
   const texts: string[] = []; const assets: InputAsset[] = []; const missing: string[] = []; const visited = new Set<string>();
+  if (graph.value.nodes.find(node => node.id === targetId)?.generation?.referenceOnly) {
+    for (const edge of edges.value.filter(edge => edge.target === targetId)) {
+      const data = nodeData(edge.source); if (data?.kind !== "image") continue;
+      if (!data.asset) { missing.push(data.title); continue; }
+      if (!assets.some(asset => asset.path === data.asset!.path)) assets.push({ ...data.asset, kind: "image" });
+    }
+    return { text: "", assets, missing };
+  }
   function read(id: string, collectMedia: boolean) {
     if (visited.has(id)) return; visited.add(id);
     for (const edge of edges.value.filter(edge => edge.target === id)) {
@@ -600,8 +670,8 @@ function getCanvasContext(): CanvasContext {
         case "addNode": {
           const args = canvasSchemas.addNode.parse(request.args); const item = createItems.find(item => item.type === args.type); if (!item) throw new Error("未知节点类型，请先查询 getCanvas。");
           if (graph.value.nodes.length >= 150 || Math.abs(args.position.x) > 1000000 || Math.abs(args.position.y) > 1000000 || args.label && args.label.length > 120) throw new Error("节点数量、位置或名称超过画布限制。");
-          remember(); const id = crypto.randomUUID(); const model = item.kind === "text" ? undefined : props.project.models[item.kind];
-          const node: CreativeNode = { id, kind: item.kind, title: args.label || item.label, text: "", position: args.position, ...(item.generate ? { generation: { ratio: props.project.ratio, duration: 5 as const, ...(model ? { model: { ...model } } : {}) } } : {}) };
+          remember(); const id = crypto.randomUUID();
+          const node: CreativeNode = { id, kind: item.kind, title: args.label || item.label, text: "", position: args.position, ...(item.generate && item.kind !== "text" ? { generation: defaultGeneration(item.kind) } : {}) };
           graph.value.nodes.push(node); graph.value.positions[id] = args.position; renderNodes(); changed(); result = { node: { id, type: item.type, label: node.title, position: node.position } }; break;
         }
         case "moveNodes": {
@@ -662,6 +732,11 @@ async function selectNodes(nodeIds: string[]) {
   await whenReady();
   return getCanvasContext().call({ name: "selectNodes", args: { nodeIds } });
 }
+async function focusNode(nodeId: string) {
+  await selectNodes([nodeId]);
+  viewInitialized = true;
+  await revealNewNode(nodeId);
+}
 flow.onPaneClick(() => { menu.value = undefined; });
 flow.onConnectEnd(event => {
   const handle = flow.connectionStartHandle.value; if (!handle || handle.type !== "source" || flow.connectionStatus.value === "valid" || !event || event.type === "touchcancel") return;
@@ -672,6 +747,7 @@ flow.onConnectEnd(event => {
 });
 function onDoubleClick(event: MouseEvent) { if ((event.target as Element)?.classList.contains("vue-flow__pane")) openMenuAt(event.clientX, event.clientY); }
 watch(() => props.directory, async (directory, _old, cleanup) => {
+  resultPreviewVisible.value = false; resultPreview.value = undefined; resultEditVisible.value = false; resultInstruction.value = ""; downloadingResult.value = false;
   canvasAborter.abort(); canvasAborter = new AbortController(); const token = ++generation; const aborter = canvasAborter; cleanup(() => aborter.abort()); ready.value = false; error.value = ""; writer = undefined; graph.value = emptyCreativeGraph(); selectedNodeId.value = ""; dirty.value = false; undoStack.value = []; redoStack.value = []; viewInitialized = false; renderNodes(true);
   try {
     const result = await readCreativeGraph(directory, aborter.signal); if (token !== generation || aborter.signal.aborted) return;
@@ -687,10 +763,11 @@ watch(() => props.project.revision, () => { renderNodes(); if (ready.value) sync
 watch(() => props.selectedId, id => { if (id && selectedNodeId.value !== `shot:${id}` && !selectedFree.value) selectNode(`shot:${id}`); });
 watch(canvasRoot, (element, _previous, cleanup) => { if (!element) return; element.addEventListener("dblclick", onDoubleClick); cleanup(() => element.removeEventListener("dblclick", onDoubleClick)); });
 onBeforeUnmount(() => { if (saveTimer) clearTimeout(saveTimer); if (dirty.value && ready.value) void flushSave().catch(() => {}); canvasAborter.abort(); generation++; });
-defineExpose({ flushSave, hasUnsavedChanges: () => dirty.value || uploading.value || freeDirty.value, confirmApplied, fit, getCanvasContext, selectNodes, whenReady });
+defineExpose({ flushSave, hasUnsavedChanges: () => dirty.value || uploading.value || freeDirty.value, confirmApplied, fit, getCanvasContext, selectNodes, focusNode, whenReady });
 </script>
 
 <style scoped lang="scss">
+.resultPreviewMedia { height: min(68vh, 760px); min-height: 220px; aspect-ratio: auto; background: #101214; }
 .usageBadge { margin: 0; padding: 6px 12px; border-top: 1px solid #30343b; color: #8fcba5; font-size: 10px; span { color: #e4bd77; } }
 .usageSummary { margin: 4px 0 10px; color: #a3b5a9; font-size: 11px; span { color: #d3b880; } }
 .usedShotActions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; button { border: 1px solid #41564a; border-radius: 5px; padding: 5px 8px; background: #28382e; color: #b0dfbe; font: inherit; font-size: 11px; cursor: pointer; &:disabled { opacity: .4; cursor: default; } } }
@@ -732,6 +809,8 @@ defineExpose({ flushSave, hasUnsavedChanges: () => dirty.value || uploading.valu
     .configureLink { color: #b5c0cb; font-size: 11px; }
     .mediaDockBody > div { strong { color: #d5dbe3; } p { color: #9ea7b2; } }
     .dockHint { color: #e8c695; font-size: 12px; line-height: 1.65; display: flex; align-items: center; gap: 12px; }
+    .resultActions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 10px 0 12px; > button { display: inline-flex; align-items: center; gap: 5px; background: #303740; color: #d1dce5; border: 1px solid #4a5662; border-radius: 7px; padding: 7px 10px; font-size: 11px; cursor: pointer; &:hover:not(:disabled) { border-color: #81c99a; color: #d9f4e2; } &:disabled { opacity: .4; cursor: default; } } }
+    .resultEdit { margin: 8px 0 14px; padding: 12px; border: 1px solid #476353; border-radius: 10px; background: #1d2922; > label { display: block; color: #c4d8ca; font-size: 12px; margin-bottom: 7px; } > textarea { box-sizing: border-box; display: block; width: 100%; min-height: 58px; max-height: 150px; resize: vertical; border: 1px solid #415a4a; border-radius: 7px; padding: 8px 10px; background: #162019; color: #e0ece4; font: inherit; font-size: 12px; line-height: 1.7; &::placeholder { color: #8a9f91; } } > div { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 9px; > span { flex: 1; color: #9eb4a6; font-size: 10px; line-height: 1.6; } > button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #486351; border-radius: 6px; padding: 6px 9px; background: #2a3d30; color: #d1e6d8; font-size: 11px; cursor: pointer; &[type="submit"] { background: #82dfa1; border-color: #82dfa1; color: #153020; } &:disabled { opacity: .4; cursor: default; } } } }
   }
   .generationDock {
     width: min(740px, calc(100% - 160px)); padding: 15px 18px; scrollbar-width: thin;
@@ -743,6 +822,7 @@ defineExpose({ flushSave, hasUnsavedChanges: () => dirty.value || uploading.valu
   .generationReferences { display: flex; gap: 8px; align-items: center; overflow-x: auto; padding: 2px 0 11px; > span { font-size: 11px; color: #9ca6b2; flex: none; } .referenceChip { display: flex; gap: 7px; align-items: center; max-width: 180px; border: 1px solid #4d5560; background: #292e35; color: #bec7d3; padding: 4px 8px 4px 4px; border-radius: 8px; cursor: pointer; > span { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } :deep(.studioThumbnail) { flex: none; width: 35px; height: 35px; border-radius: 4px; } &.active { border-color: #72db96; background: #29372f; } } .referenceAdd { height: 42px; display: flex; gap: 5px; align-items: center; flex: none; color: #b4bdc9; border: 1px dashed #59616d; background: transparent; border-radius: 8px; padding: 0 10px; cursor: pointer; font-size: 11px; } }
     > textarea { resize: vertical; min-height: 64px; max-height: 150px; }
     .upstreamText { color: #aab4bf; font-size: 11px; line-height: 1.6; display: flex; gap: 6px; margin: 3px 0 10px; > svg { flex: none; margin-top: 3px; } }
+    .referenceModeHint { color: #a2bfad; font-size: 11px; line-height: 1.6; margin: 0 0 8px; }
     .generationSettings { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 7px; > label { display: flex; gap: 5px; align-items: center; min-width: 0; > span { color: #969fab; font-size: 10px; } select { background: #30353c; color: #dbe1e8; border: 1px solid #4a515c; border-radius: 7px; padding: 7px 8px; max-width: 230px; font-size: 12px; outline: none; } &:first-child { flex: 1; select { max-width: 100%; flex: 1; min-width: 140px; } } } }
     .generationResults { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 11px 0 3px; border-top: 1px solid #3a4049; margin-top: 12px; > span { color: #a3adb9; font-size: 11px; flex: none; } > button { width: 74px; flex: none; background: #292f35; border: 1px solid #48515b; border-radius: 8px; padding: 3px; cursor: pointer; color: #bdc6d2; &.active { border-color: #72db96; } :deep(.studioThumbnail) { width: 66px; height: 42px; border-radius: 5px; } > span { display: block; font-size: 10px; padding: 5px 0 3px; } } }
     > footer { border-top: 1px solid #3a4049; padding-top: 11px; margin-top: 12px; .dockPrimary { min-height: 35px; } }

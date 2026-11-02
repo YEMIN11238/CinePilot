@@ -8,6 +8,7 @@ export type CreativeGeneration = {
   ratio: "16:9" | "9:16" | "1:1";
   duration: 5 | 10;
   referencePath?: string;
+  referenceOnly?: boolean;
   scope?: DirectorGenerationInput["scope"];
   requestId?: string;
   inputSignature?: string;
@@ -74,6 +75,10 @@ function validateGraph(value: unknown): CreativeGraph {
       const settings = record(node.generation);
       if (node.kind === "text" || !["16:9", "9:16", "1:1"].includes(String(settings.ratio)) || ![5, 10].includes(Number(settings.duration))) return invalidGraph();
       result.generation = { ratio: settings.ratio as CreativeGeneration["ratio"], duration: settings.duration as 5 | 10 };
+      if (settings.referenceOnly !== undefined) {
+        if (typeof settings.referenceOnly !== "boolean") return invalidGraph();
+        result.generation.referenceOnly = settings.referenceOnly;
+      }
       if (settings.model !== undefined) {
         const model = record(settings.model);
         if (typeof model.providerId !== "string" || !model.providerId || model.providerId.length > 160 || typeof model.modelId !== "string" || !model.modelId || model.modelId.length > 200) return invalidGraph();

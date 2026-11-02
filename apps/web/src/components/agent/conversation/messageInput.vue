@@ -220,6 +220,23 @@ async function fillPrompt(prompt: string, attachments?: AgentAttachment[]) {
   if (sender === instance) instance.focus("last");
 }
 
+async function appendPrompt(prompt: string, attachments: AgentAttachment[] = [], mentions: AgentMention[] = []) {
+  const instance = sender;
+  if (!instance || locked.value) throw new Error("输入框尚未就绪，请稍后再试");
+  if (draftAttachments.value.length + attachments.length > 20) throw new Error("每条消息最多添加 20 个附件，请先整理当前附件");
+  const mentionedIds = new Set(instance.getTagData().mention.map(item => item.id));
+  const addedMentions = mentions.filter((mention, index) => !mentionedIds.has(mention.id) && mentions.findIndex(item => item.id === mention.id) === index);
+  if (mentionedIds.size + addedMentions.length > 20) throw new Error("每条消息最多提及 20 个输出或素材，请先整理当前引用");
+  const model = instance.getModel();
+  if (!getDraft().prompt.includes(prompt)) model.push([{ type: "Write", text: prompt }]);
+  draftAttachments.value.push(...attachments);
+  await instance.reset({ clearHistory: false, chatNode: model });
+  if (sender !== instance) throw new Error("对话已切换，请重新选择素材");
+  mentionPosition = undefined;
+  if (addedMentions.length) await insertMentions(addedMentions);
+  if (sender === instance) instance.focus("last");
+}
+
 async function editMessage(item: AgentMessage) {
   const instance = sender;
   if (!instance || locked.value || props.remoteRunning || item.role !== "user") return;
@@ -470,7 +487,7 @@ async function clearDraft() {
   await sender?.reset();
 }
 
-defineExpose({ getDraft, clearDraft, fillPrompt, editMessage, cancelEdit, restoreEditingDraft });
+defineExpose({ getDraft, clearDraft, fillPrompt, appendPrompt, editMessage, cancelEdit, restoreEditingDraft });
 </script>
 
 <style lang="scss">

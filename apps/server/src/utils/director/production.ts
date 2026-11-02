@@ -37,12 +37,12 @@ export const productionDraftSchema = z.strictObject({
 });
 const draftCharacterSchema = characterSchema.omit({ revision: true, confirmedAt: true, referenceImage: true }).extend({ id: z.string().min(1).max(80) });
 const draftSceneSchema = sceneSchema.extend({ id: z.string().min(1).max(80), dialogues: z.array(z.strictObject({ speakerId: z.string().min(1).max(80), text: z.string().trim().min(1).max(1000) })).max(50) });
-const scriptDraftSchema = z.strictObject({ logline: z.string().trim().min(1).max(2000), characters: z.array(draftCharacterSchema).min(1).max(12), scenes: z.array(draftSceneSchema).min(1).max(24) });
+const scriptDraftSchema = z.strictObject({ logline: z.string().trim().min(1).max(2000), characters: z.array(draftCharacterSchema).max(12), scenes: z.array(draftSceneSchema).min(1).max(24) });
 
-export async function draftProduction(cwd: string, input: z.infer<typeof productionDraftSchema>) {
+export async function draftProduction(cwd: string, input: z.infer<typeof productionDraftSchema>, referenceImage?: DirectorProject["referenceImage"]) {
   if (await readProject(cwd)) invalid("当前目录已有项目，请选择新的创作文件夹", 409);
   if (input.targetDuration < input.shotCount || input.targetDuration > input.shotCount * 30) invalid("目标时长与镜头数不匹配，每镜需为1至30秒");
-  const output = await requestJson(`为漫剧创作任务起草可供编导审阅的剧本，不生成分镜或媒体。人物身份、已知事实、动机和对白说话人必须一致。把固定外貌appearance与服装costume分开，未知事实不要写成已知事实。严格遵守人物约束与不可变条件。总时长约${input.targetDuration}秒，第${input.episode}集。\n任务资料：${JSON.stringify(input)}\n返回严格JSON：{"logline":"一句话剧情","characters":[{"id":"c1","name":"角色名","appearance":"稳定外貌","costume":"服装","props":"道具或无","goal":"当前行动动机","knownFacts":"角色在此集已知的事实"}],"scenes":[{"id":"s1","title":"场景名","location":"地点与时间","action":"可见动作及因果","dialogues":[{"speakerId":"c1","text":"对白"}]}]}。场景和角色用唯一短ID，dialogues的speakerId必须引用characters。`, input);
+  const output = await requestJson(`为漫剧或短片创作任务起草可供编导审阅的剧本，不生成分镜或媒体。人物身份、已知事实、动机和对白说话人必须一致。把固定外貌appearance与服装costume分开，未知事实不要写成已知事实。严格遵守人物约束与不可变条件。无人出镜的产品或场景短片必须返回characters:[]及空dialogues，不得为满足格式编造人物。参考图仅供后续画面生成使用，你没有看到参考图，不得声称已经识图或验证人物外观。总时长约${input.targetDuration}秒，第${input.episode}集。\n任务资料：${JSON.stringify(input)}\n返回严格JSON：{"logline":"一句话剧情","characters":[{"id":"c1","name":"角色名","appearance":"稳定外貌","costume":"服装","props":"道具或无","goal":"当前行动动机","knownFacts":"角色在此集已知的事实"}],"scenes":[{"id":"s1","title":"场景名","location":"地点与时间","action":"可见动作及因果","dialogues":[{"speakerId":"c1","text":"对白"}]}]}。场景和角色用唯一短ID，dialogues的speakerId必须引用characters。`, input);
   const result = scriptDraftSchema.safeParse(output);
   if (!result.success) invalid("模型剧本未满足人物、场景与对白字段要求，目录未创建项目，请重试", 502);
   const identifiers = result.data.characters.map(character => character.id);
@@ -56,7 +56,7 @@ export async function draftProduction(cwd: string, input: z.infer<typeof product
     episode: input.episode, targetDuration: input.targetDuration, shotCount: input.shotCount, characterConstraints: input.characterConstraints, invariants: input.invariants,
     currentScriptVersionId: id, scriptVersions: [{ id, number: 1, logline: result.data.logline, scenes, createdAt: new Date().toISOString() }], characters, reviews: [],
   };
-  return createProject(cwd, { title: input.title, brief: input.brief, style: input.style, ratio: input.ratio, shots: [], production });
+  return createProject(cwd, { title: input.title, brief: input.brief, style: input.style, ratio: input.ratio, shots: [], production, ...(referenceImage ? { referenceImage } : {}) });
 }
 export async function saveScript(cwd: string, expectedRevision: number, logline: string, scenes: ProductionScene[]) {
   return mutate(cwd, expectedRevision, project => {

@@ -8,7 +8,7 @@
         <button v-if="project" class="headerText taskButton" type="button" @click="tasksVisible = true"><icon-list-check :size="16" />任务<span v-if="activeTaskCount">{{ activeTaskCount }}</span></button>
         <button class="headerIcon" type="button" aria-label="供应商设置" @click="$emit('openSettings')"><icon-settings :size="17" /></button>
         <el-button v-if="project?.shots.length" class="previewButton" :icon="IconPlayerPlay" @click="openPreview()">预览短片</el-button>
-        <el-button v-if="project" type="primary" :disabled="busy || !project.shots.length" @click="openExport"><icon-download :size="14" />导出</el-button>
+        <el-button v-if="project?.shots.length" type="primary" :disabled="busy" @click="openExport"><icon-download :size="14" />导出</el-button>
       </div>
     </header>
     <div v-if="project && (latestExport || latestExportTask) && (exporting || requestedExportTaskId)" class="exportStatus" role="status" aria-live="polite"><icon-loader-2 v-if="exporting" class="spinner" :size="16" /><icon-check v-else-if="latestExportTask?.status === 'succeeded'" :size="16" /><icon-alert-circle v-else :size="16" /><span>{{ exportStatusText }}</span><el-button v-if="latestExportTask && ['failed', 'interrupted'].includes(latestExportTask.status)" text :disabled="busy || !canRetry(latestExportTask)" @click="retryTask(latestExportTask)">重试导出</el-button><el-button v-if="latestExport" type="primary" :loading="savingExport" :disabled="exporting" @click="downloadExport(latestExport.asset)">{{ latestExportStale ? '保存上次导出' : '保存视频' }}</el-button></div>
@@ -37,7 +37,7 @@
         <div class="railBottom"><span class="localDot" />本地创作空间<button type="button" aria-label="刷新项目" @click="load(true)"><icon-refresh :size="13" /></button></div>
       </aside>
       <main class="creativeArea">
-        <div class="boardToolbar"><div class="workspaceTabs" role="group" aria-label="工作视图"><button v-if="viewMode !== 'production'" type="button" :class="{ active: assetRailVisible }" @click="assetRailVisible = !assetRailVisible"><icon-folders :size="14" />素材</button><button v-if="project.production" type="button" :class="{ active: viewMode === 'production' }" @click="setView('production')"><icon-file-text :size="14" />故事与分镜</button><button type="button" :class="{ active: viewMode === 'canvas' }" @click="setView('canvas')"><icon-layout-board :size="14" />创作画布</button><button type="button" :class="{ active: viewMode === 'preview' }" @click="setView('preview')"><icon-timeline :size="14" />剪辑</button></div><div class="boardActions"><button v-if="canvasActive && project.shots.length" class="canvasTimelineToggle" type="button" :aria-pressed="canvasTimelineVisible" @click="canvasTimelineVisible = !canvasTimelineVisible"><icon-timeline :size="14" />时间轴</button><span class="readyCount">{{ readyClips }} / {{ project.shots.length }} 视频</span><button v-if="viewMode !== 'production'" class="toggleInspector" type="button" aria-label="显示或隐藏导演助手" :aria-pressed="inspectorVisible" @click="toggleAgent"><icon-sparkles :size="15" /><span>AI 助手</span></button></div></div>
+        <div class="boardToolbar"><div class="workspaceTabs" role="group" aria-label="工作视图"><button v-if="viewMode !== 'production'" type="button" :class="{ active: assetRailVisible }" @click="assetRailVisible = !assetRailVisible"><icon-folders :size="14" />素材</button><button v-if="project.production" type="button" :class="{ active: viewMode === 'production' }" @click="setView('production')"><icon-file-text :size="14" />故事与分镜</button><button type="button" :class="{ active: viewMode === 'canvas' }" @click="setView('canvas')"><icon-layout-board :size="14" />创作画布</button><button type="button" :class="{ active: viewMode === 'preview' }" @click="setView('preview')"><icon-timeline :size="14" />剪辑</button></div><div class="boardActions"><button v-if="canvasActive && project.shots.length" class="canvasTimelineToggle" type="button" :aria-pressed="canvasTimelineVisible" @click="canvasTimelineVisible = !canvasTimelineVisible"><icon-timeline :size="14" />时间轴</button><span class="readyCount">{{ project.shots.length ? `${readyClips} / ${project.shots.length} 视频` : `${project.tasks.filter(task => task.status === 'succeeded' && task.output).length} 个生成结果` }}</span><button v-if="viewMode !== 'production'" class="toggleInspector" type="button" aria-label="显示或隐藏导演助手" :aria-pressed="inspectorVisible" @click="toggleAgent"><icon-sparkles :size="15" /><span>AI 助手</span></button></div></div>
         <div class="workspaceStage" :class="{ productionStage: viewMode === 'production', previewWorkspace: viewMode === 'preview' }">
           <productionPanel ref="productionEditor" v-if="viewMode === 'production' && project.production" :project="project" :directory="directory" :aiSelection="aiSelection" :busy="busy" @updated="acceptProject($event, directory)" @busyChange="productionBusy = $event" @selectShot="focusProductionShot" @generate="generate" @preview="openPreview()" @configure="openModelSettings" />
           <studioPreview ref="inlinePlayer" v-else-if="viewMode === 'preview' && !previewVisible && project.shots.length" :key="directory" :directory="directory" :project="project" :initialShotId="inlineShotId" @selectShot="selectedShotId = $event" @timeUpdate="playhead = $event" />
@@ -51,7 +51,7 @@
       <aside v-show="inspectorVisible && viewMode !== 'production'" class="inspector" aria-label="导演助手与镜头属性">
         <div class="inspectorTabs"><button type="button" :class="{ active: rightTab === 'agent' }" @click="rightTab = 'agent'"><icon-sparkles :size="14" />导演助手</button><button type="button" :class="{ active: rightTab === 'shot' }" @click="rightTab = 'shot'">镜头属性</button><button type="button" :class="{ active: rightTab === 'music' }" aria-label="声音与配乐设置" @click="rightTab = 'music'"><icon-music :size="14" />声音</button></div>
         <div v-if="rightTab === 'agent'" class="inspectorContent agentWorkspace">
-          <div class="liveAgent"><div class="agentContext"><icon-sparkles :size="14" /><span>{{ selectedShot ? `镜头 ${selectedShot.order} · ${currentVersion(selectedShot).title}` : '当前项目与选中节点' }}</span><small>准备方案 · 确认后生成</small></div><agent v-model="agentVisible" /></div>
+          <div class="liveAgent"><div class="agentContext"><icon-sparkles :size="14" /><span>{{ selectedShot ? `镜头 ${selectedShot.order} · ${currentVersion(selectedShot).title}` : '当前项目与选中节点' }}</span><small>准备方案 · 确认后生成</small></div><agent ref="creativeAssistant" v-model="agentVisible" /></div>
           <div v-if="pendingPlan" class="planCard"><div class="planHeading"><span><icon-git-branch :size="14" />修改计划</span><b>{{ pendingPlan.changes.length }} 个镜头</b><el-button class="discardPlan" text :disabled="busy" @click="discardPlan">放弃计划</el-button></div><p class="planInstruction" :title="planInstructionText">{{ planInstructionText }}</p><div v-for="change in pendingPlan.changes" :key="change.shotId" class="planChange" @click="selectShot(change.shotId)"><div class="changeTitle"><span>{{ String(shotOrder(change.shotId)).padStart(2, '0') }}</span><strong>{{ currentVersion(findShot(change.shotId)).title }}</strong><icon-arrow-up-right :size="12" /></div><dl><template v-for="(value, key) in change.patch" :key="key"><dt>{{ fieldLabels[key] }}</dt><dd>{{ planFieldValue(key, value) }}</dd></template></dl><div class="effectLine"><span v-for="step in planEffect(change.shotId)?.regenerate" :key="step" class="regenerateTag"><icon-refresh :size="10" />重做{{ step === 'image' ? '关键帧' : '视频' }}</span><span v-for="step in planEffect(change.shotId)?.reuse" :key="step" class="reuseTag"><icon-check :size="10" />复用{{ step === 'image' ? '关键帧' : '视频' }}</span></div></div><p class="preserveNote"><icon-shield-check :size="12" />{{ preservedShotText }}</p><p v-if="planConflict" class="staleNote" role="status">{{ planConflict }}</p><el-button type="primary" :disabled="busy || !!planConflict" :loading="applying" @click="executePlan">{{ planActionLabel }}<icon-arrow-right :size="14" /></el-button><div v-if="planConflict" class="planControls"><el-button text :disabled="busy || !aiSelection" @click="planRevision(true)">重新制定</el-button></div><p v-if="planHasRegeneration && !canGeneratePlan" class="planHint">可以先保存修改，接入生成模型后再生成。</p></div>
         </div>
         <div v-else-if="rightTab === 'shot'" class="inspectorContent">
@@ -59,7 +59,7 @@
           <div v-else class="detailEmpty"><icon-layout-board :size="26" /><p>在画布或时间轴上选择一个镜头，<br />查看画面、素材和剪辑参数。</p></div>
         </div>
         <div v-else class="inspectorContent musicInspector"><div class="musicHeading"><icon-music :size="24" /><h3>声音与配乐</h3><p>导入对白、音效和背景音乐，在预览与成片中同步播放。</p></div><template v-if="project.music"><div class="musicFile"><icon-file-music :size="22" /><strong>{{ musicName }}</strong></div><label>配乐音量 <span>{{ musicVolume }}%</span></label><el-slider v-model="musicVolume" :min="0" :max="100" :disabled="busy" @change="saveMusicVolume" /><p class="musicNote">音乐从成片开始循环播放，铺满成片时长。{{ project.originalAudio ? '保留原视频声音，并与配乐、已添加的对白和音效一起混合。' : '原视频声音关闭；配乐与已添加的对白、音效一起混合。' }}</p><el-button :disabled="busy" @click="musicInput?.click()">更换配乐</el-button><el-button text type="danger" :disabled="busy" @click="perform('music', { music: null })">移除</el-button></template><el-button v-else class="musicUpload" :icon="IconUpload" :disabled="busy" @click="musicInput?.click()">导入背景音乐</el-button><audioPanel :project="project" :directory="directory" :busy="busy" :selectedShotId="selectedShotId" @import="importAudioTrack" @update="(trackId, patch) => perform('updateAudioTrack', { trackId, patch })" @remove="trackId => perform('removeAudioTrack', { trackId })" /></div>
-        <div class="inspectorFooter"><i :class="{ configured: imageReady && videoReady }" /><span>{{ generationConnectionText }}</span><button type="button" @click="openModelSettings">配置 <icon-arrow-up-right :size="11" /></button></div>
+        <div class="inspectorFooter"><i :class="{ configured: imageConnectionReady && videoConnectionReady }" /><span>{{ generationConnectionText }}</span><button type="button" @click="openModelSettings">配置 <icon-arrow-up-right :size="11" /></button></div>
       </aside>
     </div>
     <input ref="musicInput" type="file" accept="audio/*" class="fileInput" @change="uploadMusic" /><input ref="selectedImportInput" type="file" class="fileInput" :accept="selectedImportKind + '/*'" @change="importSelectedFile" />
@@ -118,6 +118,7 @@ import agent from "@/components/agent/index.vue";
 import taskDrawer from "./taskDrawer.vue";
 import timelineEditor from "./timelineEditor.vue";
 import audioPanel from "./audioPanel.vue";
+import { createCreativeMentions } from "./creativeMentions";
 
 const props = defineProps<{ settingsVisible?: boolean }>();
 const emit = defineEmits<{ openSettings: []; exit: []; openCanvas: [] }>();
@@ -150,6 +151,7 @@ const viewMode = ref<"production" | "canvas" | "preview">("preview");
 const canvasActive = computed(() => viewMode.value === "canvas");
 const canvasTimelineVisible = ref(false);
 const creativeEditor = ref<InstanceType<typeof creativeCanvas>>();
+const creativeAssistant = ref<InstanceType<typeof agent>>();
 const canvasNodeLabels = ref<Record<string, string>>({});
 const inspectorVisible = ref(true);
 const assetRailVisible = ref(false);
@@ -207,6 +209,13 @@ const fieldLabels: Record<keyof ShotFields, string> = { title: "名称", descrip
 const taskLabels = { queued: "排队中", running: "执行中", succeeded: "已完成", failed: "失败", interrupted: "已中断", verificationRequired: "上游待核对", cancelled: "已停止本地任务" };
 const unverifiedTasks = computed(() => project.value?.tasks.filter(task => task.status === "verificationRequired") || []);
 const activeTaskCount = computed(() => project.value?.tasks.filter(task => ["queued", "running", "verificationRequired"].includes(task.status)).length ?? 0);
+const creativeMentions = createCreativeMentions(async () => {
+  if (viewMode.value !== "canvas") await setView("canvas");
+  await nextTick();
+  await creativeEditor.value?.whenReady();
+  return creativeEditor.value?.getCanvasContext();
+}, () => project.value);
+provide("mentionCanvas", () => creativeMentions);
 provide("canvas", (): CanvasContext | undefined => {
   const target = directory.value;
   const id = project.value?.id;
@@ -243,7 +252,9 @@ const canGenerateMissing = computed(() => {
 });
 const imageReady = computed(() => !!project.value?.models.image && configuredProviders.value.includes(project.value.models.image.providerId));
 const videoReady = computed(() => !!project.value?.models.video && configuredProviders.value.includes(project.value.models.video.providerId));
-const generationConnectionText = computed(() => imageReady.value && videoReady.value ? "生成模型已接入" : videoReady.value ? "视频已接入 · 图片待配置" : imageReady.value ? "图片已接入 · 视频待配置" : "图片 / 视频模型待接入");
+const imageConnectionReady = computed(() => imageModels.value.some(model => configuredProviders.value.includes(model.providerId)));
+const videoConnectionReady = computed(() => videoModels.value.some(model => configuredProviders.value.includes(model.providerId)));
+const generationConnectionText = computed(() => imageConnectionReady.value && videoConnectionReady.value ? "图片 / 视频模型已接入" : videoConnectionReady.value ? "视频已接入 · 图片待配置" : imageConnectionReady.value ? "图片已接入 · 视频待配置" : "图片 / 视频模型待接入");
 const pendingPlan = computed(() => { const plan = project.value?.plans.at(-1); return plan?.status === "pending" ? plan : undefined; });
 const planInstructionText = computed(() => pendingPlan.value?.instruction.replace(/^当前选中镜头[\s\S]*?用户要求：/, "") || "");
 const planConflict = computed(() => {
@@ -458,13 +469,23 @@ async function downloadExport(asset: DirectorAsset, mode = latestExport.value?.m
   finally { savingExport.value = false; }
 }
 function selectShot(id: string) { selectedShotId.value = id; inlineShotId.value = id; if (!canvasActive.value) inspectorVisible.value = true; if (rightTab.value === "music") rightTab.value = "shot"; }
-function openCanvasAgent(shotId?: string) { if (shotId) selectShot(shotId); else selectedShotId.value = ""; rightTab.value = "agent"; inspectorVisible.value = true; }
+async function openCanvasAgent(shotId?: string) {
+  const target = directory.value;
+  try {
+    if (shotId) selectShot(shotId);
+    const mention = shotId ? await creativeMentions.getMention(`shot:${shotId}`) : await creativeMentions.selectedMention();
+    if (directory.value !== target) return;
+    rightTab.value = "agent"; inspectorVisible.value = true;
+    await nextTick();
+    await creativeAssistant.value?.fillMessage("请针对这份内容继续创作。我的要求是：", [], [mention]);
+  } catch (cause) { if (directory.value === target) ElMessage.error(directorError(cause)); }
+}
 async function toggleAgent() { inspectorVisible.value = !inspectorVisible.value; if (inspectorVisible.value) { rightTab.value = "agent"; agentVisible.value = true; } await nextTick(); creativeEditor.value?.fit(); }
 async function generateCanvasNode(input: DirectorGenerationInput) {
   if (!project.value || busy.value) return;
   await creativeEditor.value?.flushSave();
   const result = await requestProject("/generation", { ...input, expectedRevision: project.value.revision });
-  if (result) { tasksVisible.value = true; ElMessage.success("生成任务已提交，结果会回到当前节点，其他镜头可继续编辑。"); }
+  if (result) ElMessage.success("生成任务已提交，结果会回到当前节点；顶部任务按钮可查看进度。");
 }
 async function adoptGeneratedReference(task: DirectorTask) {
   const workflow = project.value?.production; const scope = task.generation?.scope;
@@ -634,6 +655,28 @@ watch(() => project.value?.tasks.find(task => task.id === requestedExportTaskId.
 watch(() => editFields.duration, duration => { if ((editFields.subtitleEnd ?? duration) > duration) editFields.subtitleEnd = duration; if ((editFields.subtitleStart ?? 0) >= duration) editFields.subtitleStart = 0; });
 watch(() => project.value?.music?.volume, volume => { musicVolume.value = Math.round((volume ?? .25) * 100); });
 watch(directory, () => { canvasNodeLabels.value = {}; placementInput.value = undefined; project.value = null; error.value = ""; busy.value = false; imageSelection.value = ""; videoSelection.value = ""; instruction.value = ""; selectedShotId.value = ""; inlineShotId.value = ""; viewMode.value = "preview"; editVisible.value = false; versionsVisible.value = false; previewVisible.value = false; modelsVisible.value = false; requestedExportTaskId.value = ""; void load(true); }, { immediate: true });
+let handledEntryKey = "";
+watch([() => project.value?.id, creativeEditor, () => route.query.focusNode, () => route.query.assistant], async () => {
+  const nodeId = typeof route.query.focusNode === "string" ? route.query.focusNode : "";
+  const id = project.value?.id;
+  if (!id || viewMode.value !== "canvas" || !creativeEditor.value) return;
+  const key = `${id}:${nodeId}:${route.query.assistant || ""}`;
+  if (key === handledEntryKey) return;
+  handledEntryKey = key;
+  const target = directory.value;
+  try {
+    if (route.query.assistant === "1") { inspectorVisible.value = true; rightTab.value = "agent"; }
+    if (nodeId) await creativeEditor.value.focusNode(nodeId);
+    if (directory.value !== target) return;
+    if (route.query.entryNotice === "checkSubmission") error.value = "生成提交结果尚未确认。项目与要求已保存，请先查看顶部任务列表；不要重复发起新任务。";
+    else if (route.query.entryNotice === "submissionRejected") {
+      let message = "生成请求未通过校验，请检查节点中的模型、画幅和参考图后重试。";
+      try { message = sessionStorage.getItem(`cinePilotEntryError:${id}`) || message; sessionStorage.removeItem(`cinePilotEntryError:${id}`); } catch { /* 存储不可用时给出可操作提示。 */ }
+      error.value = message;
+    }
+    else if (route.query.entryNotice === "configureModel") error.value = "创作要求已保存在节点中，请配置生成模型，再确认生成。";
+  } catch (cause) { if (directory.value === target) error.value = directorError(cause); }
+}, { flush: "post" });
 watch(videoResolutions, values => { if (!values.includes(resolution.value)) resolution.value = values[0] || ""; });
 watch(() => props.settingsVisible, (visible, previous) => { if (previous && !visible) void load(true); });
 watch(agentVisible, visible => { if (!visible) { inspectorVisible.value = false; agentVisible.value = true; } });
@@ -729,7 +772,9 @@ onScopeDispose(() => { disposed = true; lifetime.abort(); clearInterval(timer); 
 .editTip { font-size: 11px; line-height: 1.8; color: #95ab9b; margin: 0; }
 .exportResult { display: flex; gap: 12px; align-items: center; margin-top: 16px; color: #8ca495; font-size: 11px; > span:first-child { flex: 1; } .el-button { font-size: 11px; } }
 .planControls { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; .el-button { margin: 0; color: inherit; } }
-:global(.studioDialog) { font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif; --el-color-primary: #087c52; --el-color-primary-light-9: #edf6ef; --el-bg-color: #fff; --el-dialog-bg-color: #fff; --el-fill-color-blank: #fff; --el-text-color-primary: #34523f; --el-text-color-regular: #789782; --el-border-color: #dbe7df; --el-text-color-placeholder: #abc0b1; border: 1px solid #e2ebe5; border-radius: 18px; }
+:global(.studioDialog) { font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif; --el-color-primary: #087c52; --el-color-primary-light-9: #edf6ef; --el-bg-color: #fff; --el-dialog-bg-color: #fff; --el-fill-color-blank: #fff; --el-text-color-primary: #34523f; --el-text-color-regular: #789782; --el-border-color: #dbe7df; --el-text-color-placeholder: #abc0b1; border: 1px solid #e2ebe5; border-radius: 18px; display: flex; flex-direction: column; max-height: calc(100dvh - 48px); margin-top: min(8vh, 48px); }
+:global(.studioDialog .el-dialog__body) { min-height: 0; overflow-y: auto; }
+:global(.studioDialog .el-dialog__header), :global(.studioDialog .el-dialog__footer) { flex-shrink: 0; }
 .spinner { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

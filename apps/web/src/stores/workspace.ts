@@ -16,6 +16,10 @@ export type Project = {
   directory: string;
   name: string;
   lastOpenedAt: number;
+  previewAsset?: { path: string; mimeType: string };
+  stage?: "planning" | "generating" | "review" | "exported" | "draft";
+  statusLabel?: string;
+  nextAction?: string;
 };
 
 export const useWorkspaceStore = defineStore("workspace", () => {
@@ -33,9 +37,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     signal?.throwIfAborted();
     if (data.code !== 200 || !data.data?.directory) throw new Error(data.message || "工作目录校验失败");
     const checkedDirectory = data.data.directory;
-    const existing = projectList.value.find(project => project.directory === previousDirectory)
-      ?? projectList.value.find(project => project.directory === checkedDirectory);
-    const added = { directory: checkedDirectory, name: name?.trim() || existing?.name || checkedDirectory.split(/[\\/]/).filter(Boolean).at(-1) || checkedDirectory, lastOpenedAt: Date.now() };
+    const existing = projectList.value.find(project => project.directory === checkedDirectory)
+      ?? projectList.value.find(project => project.directory === previousDirectory)
+      ?? (project.value?.directory === checkedDirectory ? project.value : undefined);
+    const added: Project = { ...existing, directory: checkedDirectory, name: name?.trim() || existing?.name || checkedDirectory.split(/[\\/]/).filter(Boolean).at(-1) || checkedDirectory, lastOpenedAt: Date.now() };
     projectList.value = [
       added,
       ...projectList.value.filter(item => item.directory !== previousDirectory && item.directory !== checkedDirectory),

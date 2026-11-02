@@ -34,14 +34,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch, type ComponentPublicInstance } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch, type ComponentPublicInstance } from "vue";
 import axios from "axios";
 import { translate } from "@toonflow/i18n/vue";
 import { ElMessage } from "element-plus";
 import { useWorkspaceStore } from "@/stores/workspace";
 import useWorkspaceFiles from "@/lib/workspaceFiles";
-import type { AgentConversation, AgentHistory } from "./types";
-import type { AgentEvent, AgentSubAgent } from "@toonflow/server/agent/types";
+import type { AgentAttachment, AgentConversation, AgentHistory } from "./types";
+import type { AgentEvent, AgentMention, AgentSubAgent } from "@toonflow/server/agent/types";
 import agentMenu from "./menu.vue";
 import conversation from "./conversation.vue";
 
@@ -281,6 +281,29 @@ async function removeConversation(file: string) {
     if (currentRequest === requestId) loading.value = false;
   }
 }
+
+async function fillMessage(prompt: string, attachments: AgentAttachment[] = [], mentions: AgentMention[] = []) {
+  const directory = workspaceStore.project?.directory;
+  if (!directory) throw new Error("请先打开项目");
+  if (!initialized.value && !loading.value && !historyLoading.value) await loadHistory(true);
+  if (loading.value || historyLoading.value) {
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => { stop(); reject(new Error("对话仍在加载，请稍后再试")); }, 15000);
+      const stop = watch([loading, historyLoading], ([loading, historyLoading]) => {
+        if (loading || historyLoading) return;
+        clearTimeout(timer); stop(); resolve();
+      });
+    });
+  }
+  if (workspaceStore.project?.directory !== directory || !initialized.value) throw new Error("项目或对话已变化，请重新选择素材");
+  visible.value = true;
+  await nextTick();
+  const view = conversationRefs.get(conversationKey.value);
+  if (!view) throw new Error("对话尚未就绪，请稍后再试");
+  await view.fillMessage(prompt, attachments, mentions);
+}
+
+defineExpose({ fillMessage });
 
 watch(() => workspaceStore.project?.directory, directory => {
   requestId++;

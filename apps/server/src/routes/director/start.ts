@@ -8,6 +8,14 @@ import { success } from "@/lib/responseFormat";
 import type { DirectorProject } from "@/lib/directorTypes";
 import u from "@/utils";
 import { draftProduction, productionDraftSchema } from "@/utils/director/production";
+import { detectMimeType } from "@/utils/media/priceReference";
+
+const maxReferenceBytes = 8 * 1024 * 1024;
+const referenceUploadSchema = z.strictObject({
+  name: z.string().trim().min(1).max(200),
+  mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]),
+  base64: z.string().min(4).max(Math.ceil(maxReferenceBytes / 3) * 4).refine(value => value.length % 4 === 0, "参考图编码无效"),
+});
 
 const schema = productionDraftSchema.extend({
   requestId: z.uuid(),
@@ -15,6 +23,7 @@ const schema = productionDraftSchema.extend({
   style: z.string().trim().max(1000).optional(),
   characterConstraints: z.string({ error: "请填写角色设定；没有人物请明确说明" }).trim().min(1, "请填写角色设定；没有人物请明确说明").max(6000),
   invariants: z.string({ error: "请填写必须保留项，或明确说明无特殊要求" }).trim().min(1, "请填写必须保留项，或明确说明无特殊要求").max(4000),
+  referenceUpload: referenceUploadSchema.optional(),
 });
 type StartedProject = { directory: string; title: string; project: DirectorProject };
 const opening = new Map<string, { signature: string; promise: Promise<StartedProject> }>();
@@ -22,13 +31,15 @@ const opening = new Map<string, { signature: string; promise: Promise<StartedPro
 export default Router().post("/", validateFields(schema.shape), async (req, res) => {
   if (!u.workspace.isLocalWorkspaceRequest(req)) throw Object.assign(new Error("请在本机创作页面新建项目"), { status: 403 });
   const parsed = schema.parse(req.body);
-  const { requestId, ...fields } = parsed;
+  const { requestId, referenceUpload, ...fields } = parsed;
   const input = productionDraftSchema.parse({
     ...fields,
     title: fields.title || Array.from(fields.brief.split(/\r?\n/)[0]!).slice(0, 24).join(""),
     style: fields.style || "电影感漫剧，统一角色外观与画面风格",
   });
-  const signature = createHash("sha256").update(JSON.stringify(input)).digest("hex");
+  const hash = createHash("sha256").update(JSON.stringify(input));
+  if (referenceUpload) hash.update(JSON.stringify(referenceUpload));
+  const signature = hash.digest("hex");
   const previous = opening.get(requestId);
   if (previous && previous.signature !== signature) throw Object.assign(new Error("同一次创建的内容已变化，请重新发起新项目"), { status: 409 });
   if (!previous) {
@@ -66,7 +77,26 @@ export default Router().post("/", validateFields(schema.shape), async (req, res)
       }
       try {
         await writeAtomic(join(temporary.path, "directorStart.json"), `${JSON.stringify({ inputHash: signature })}\n`, { exclusive: true });
-        const project = await draftProduction(temporary.path, input);
+        let referenceImage: DirectorProject["referenceImage"];
+        if (referenceUpload) {
+          const bytes = Buffer.from(referenceUpload.base64, "base64");
+          const mimeType = detectMimeType(bytes, "");
+          if (!bytes.length || bytes.length > maxReferenceBytes || bytes.toString("base64") !== referenceUpload.base64 || mimeType !== referenceUpload.mimeType) {
+            throw Object.assign(new Error("参考图内容或类型无效，请选择 8 MB 以内的 PNG、JPEG 或 WebP 图片"), { status: 400 });
+          }
+          let dimensions;
+          try { dimensions = await new Bun.Image(bytes).metadata(); }
+          catch { throw Object.assign(new Error("参考图无法打开，请重新选择图片"), { status: 400 }); }
+          if (!dimensions.width || !dimensions.height || dimensions.width * dimensions.height > 32000000) {
+            throw Object.assign(new Error("参考图像素超过限制，请使用不超过 3200 万像素的图片"), { status: 400 });
+          }
+          const extension = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[referenceUpload.mimeType];
+          const path = `referenceInput.${extension}`;
+          await writeAtomic(join(temporary.path, path), bytes, { exclusive: true });
+          referenceImage = { path, mimeType };
+        }
+        const project = await draftProduction(temporary.path, input, referenceImage);
+        if (referenceImage) await rm(join(temporary.path, referenceImage.path));
         await u.workspaceFile.renameWorkspaceFile(temporary.path, destination.path);
         const directory = await u.workspace.resolveWorkspace(req, destination.path);
         return { directory, title: project.title, project };

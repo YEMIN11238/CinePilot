@@ -75,20 +75,29 @@
           </div>
         </div>
       </el-popover>
-      <el-button text circle :loading="configLoading" :icon="IconAdjustmentsHorizontal" aria-label="媒体生成控制" title="媒体生成控制" @click="openMediaConfig" />
+      <el-popover v-if="creativeMode" trigger="click" placement="bottom-end" :width="290" :showArrow="false">
+        <template #reference><el-button text circle :icon="IconAdjustmentsHorizontal" aria-label="生成方式：确认后生成" title="生成方式：确认后生成" /></template>
+        <div class="generationModeInfo" role="note">
+          <strong>确认后生成</strong>
+          <p>助手会创建节点、填写提示词并准备参数。检查节点中的模型、参考图和画幅，点击“确认生成”后才提交任务。</p>
+          <p>修改字幕、排序和剪辑可由助手直接执行；图片、视频生成需要你确认。</p>
+        </div>
+      </el-popover>
+      <el-button v-else text circle :loading="configLoading" :icon="IconAdjustmentsHorizontal" aria-label="媒体生成控制" title="媒体生成控制" @click="openMediaConfig" />
       <slot name="actions" />
       <el-button text circle aria-label="关闭对话" title="关闭" @click="emit('close')"><icon-x :size="16" /></el-button>
     </div>
   </header>
-  <pluginConfigDialog v-if="mediaTool" v-model="configVisible" :plugin="mediaTool" :canManage="canManageTools" />
+  <pluginConfigDialog v-if="mediaTool && !creativeMode" v-model="configVisible" :plugin="mediaTool" :canManage="canManageTools" />
 </template>
 
 <script setup lang="ts">
 import axios from "axios";
-import { nextTick, ref, shallowRef, watch } from "vue";
+import { computed, inject, nextTick, ref, shallowRef, watch } from "vue";
 import { ElMessage, ElMessageBox, type InputInstance } from "element-plus";
 import type { AgentHistory } from "./types";
 import type { AgentSubAgent } from "@toonflow/server/agent/types";
+import type { CanvasContext } from "@toonflow/tool-canvas/runtime";
 import pluginConfigDialog from "@/components/settings/panels/pluginMarket/pluginConfigDialog.vue";
 import type { Plugin } from "@/components/settings/panels/pluginMarket/types";
 import {
@@ -116,6 +125,8 @@ const configVisible = ref(false);
 const configLoading = ref(false);
 const canManageTools = ref(false);
 const mediaTool = shallowRef<Plugin>();
+const createCanvasContext = inject<(() => CanvasContext | undefined) | undefined>("canvas", undefined);
+const creativeMode = computed(() => createCanvasContext?.()?.id.startsWith("creative:") ?? false);
 const subAgentStatusLabels: Record<string, string> = {
   pending: "准备中", running: "执行中", completed: "已完成", error: "失败",
   limited: "达到限制", cancelled: "已取消", inputRequired: "等待补充", unknown: "状态待确认",
@@ -253,6 +264,11 @@ async function renameHistory(item: AgentHistory) {
       .el-icon { font-size: 16px; }
     }
   }
+}
+
+.generationModeInfo {
+  strong { color: var(--el-text-color-primary); font-size: 13px; }
+  p { margin: 10px 0 0; color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.8; }
 }
 
 .subAgentMenu {

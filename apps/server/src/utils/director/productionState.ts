@@ -21,7 +21,7 @@ export const productionSchema = z.strictObject({
   characterConstraints: z.string().trim().min(1).max(6000), invariants: z.string().trim().min(1).max(4000),
   currentScriptVersionId: z.uuid(),
   scriptVersions: z.array(z.strictObject({ id: z.uuid(), number: z.number().int().positive(), logline: z.string().trim().min(1).max(2000), scenes: z.array(sceneSchema).min(1).max(24), createdAt: z.iso.datetime(), confirmedAt: z.iso.datetime().optional() })).min(1).max(100),
-  characters: z.array(characterSchema).min(1).max(12),
+  characters: z.array(characterSchema).max(12),
   characterHistory: z.array(characterSchema).max(1000).optional(),
   sceneReferences: z.array(z.strictObject({ sceneId: z.uuid(), revision: z.number().int().positive(), referenceImage: productionReferenceSchema })).max(24).optional(),
   storyboard: z.strictObject({ scriptVersionId: z.uuid(), characterRevisions: z.array(z.strictObject({ id: z.uuid(), revision: z.number().int().positive() })).max(12), shotVersions: z.array(versionReferenceSchema).min(1).max(24), confirmedAt: z.iso.datetime() }).optional(),

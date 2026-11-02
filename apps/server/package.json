@@ -18,7 +18,10 @@
     "./agent/mentionSources": "./src/agent/mentionSources.ts",
     "./i18n": "./src/lib/i18n.ts",
     "./directorTypes": "./src/lib/directorTypes.ts",
-    "./directorReview": "./src/lib/directorReview.ts"
+    "./directorReview": "./src/lib/directorReview.ts",
+    "./directorTemplates": "./src/lib/directorTemplates.ts",
+    "./directorBrief": "./src/lib/directorBrief.ts",
+    "./directorCreation": "./src/lib/directorCreation.ts"
   },
   "scripts": {
     "routes": "bun src/core.ts",
